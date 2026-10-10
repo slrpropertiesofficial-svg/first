@@ -1,0 +1,65 @@
+# SLR PROPERTIES — React (JSX) + Vite on Cloudflare Pages + D1 + R2
+
+*"Securing Your Space in the Future."*
+
+Public site (`/`), owner console (`/admin`), photos/videos in **R2**, listings and enquiries in **D1**.
+
+```
+SLR/
+├── index.html  package.json  vite.config.js
+├── public/                 # logo.jpg, robots.txt, _routes.json (only /api/* runs the function)
+├── src/
+│   ├── main.jsx            # picks site or /admin
+│   ├── App.jsx             # routes: /, /property/:slug-id, /favorites
+│   ├── components/         # Navbar, Hero, Browse, FilterBar, Listings, PropertyCard, Gallery, EmiCalculator,
+│   │                       # ContactForm, EnquiryModal, WhatsAppButton, Why, Process, Faq, ContactSection,
+│   │                       # Footer, Floating, Layout, Seo
+│   ├── pages/              # Home, PropertyDetails, Favorites, NotFound, Admin
+│   ├── context/            # AppContext (listings, filters, favorites, enquiry modal)
+│   ├── utils/              # api, contact (phone/email/WhatsApp), categories, property, filters, format, router
+│   ├── styles/             # styles.css, pages.css, admin.css
+│   └── assets/             # logo.jpg
+├── functions/api/[[path]].js   # backend API (D1 + R2)
+└── schema.sql
+```
+
+## v5 additions
+Advanced search (sale/rent, type, location, min/max budget) · property detail pages at `/property/<slug>-<id>` with gallery, specifications, highlights (taken only from the listing description), EMI, call/email/WhatsApp/enquiry form · per-property WhatsApp enquiry (prefilled message) · Favorites page (saved on the device) · enquiry form on the home page · per-page titles, descriptions, canonical/Open Graph tags, JSON-LD and robots.txt. Old `/#property-12` links redirect to the new pages.
+
+## What was new in v4
+**Website:** Buy / Rent switch with matching budget ranges · sort (featured, newest, price, area) · saved properties (heart, kept on the visitor's device) · shareable property links (`/#property-12`) · gallery with arrows and keyboard · price per sq.ft and a home-loan EMI estimator on sale listings · similar properties · Sold / Under Offer / Rented status on cards · live listing counts · How it works and FAQ sections · back-to-top button.
+
+**Admin:** sign-in, stats (inventory value, enquiries in last 7 days) · search · **edit listings** · change status and toggle Featured from the table · display price auto-filled from the numeric price · remove single gallery items · delete and export enquiries to CSV.
+
+**API additions:** `PUT /api/admin/properties/{id}` (also cleans up replaced R2 files), `DELETE /api/admin/inquiries/{id}`, statuses `Available / Under Offer / Sold / Rented`.
+
+## Deploy (browser only)
+1. Upload the **contents** of this folder to a GitHub repository.
+2. Cloudflare → **Storage & Databases → D1** → create `slr-properties-db`.
+3. **R2 Object Storage** → create bucket `slr-properties-images`.
+4. **Workers & Pages → Create → Pages → Connect to Git**, then:
+   - Framework preset: **None** (or Vite)
+   - Build command: `npm run build`
+   - Build output directory: `dist`
+5. Project → **Settings → Bindings**: D1 `DB` → `slr-properties-db`; R2 `BUCKET` → `slr-properties-images`.
+6. **Variables and Secrets**: `ADMIN_USERNAME`, `ADMIN_PASSWORD` (secrets).
+7. **Deployments → Retry deployment**. Tables and six sample listings are created on first visit. Sign in at `/admin`.
+
+## Run locally
+```
+npm install
+npm run dev        # UI only; /api is proxied to http://localhost:8788
+```
+For the full stack locally, run `npm run build` then `npx wrangler pages dev dist` with D1/R2 bindings.
+
+## API
+| Method | Endpoint | Auth |
+| --- | --- | --- |
+| GET | `/api/properties`, `/api/properties/{id}`, `/api/images/{key}` | – |
+| POST | `/api/inquiries` | – |
+| POST | `/api/admin/login` | credentials |
+| POST / PUT / DELETE | `/api/admin/properties[/{id}]` | admin token |
+| POST | `/api/admin/upload` | admin token |
+| GET / DELETE | `/api/admin/inquiries[/{id}]` | admin token |
+
+Uploads: images up to 10 MB, videos (MP4/WEBM/MOV) up to 50 MB.
