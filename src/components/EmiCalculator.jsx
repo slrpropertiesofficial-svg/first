@@ -17,7 +17,7 @@ export default function EmiCalculator({ price }) {
         <label>Tenure <b>{years} yrs</b><input type="range" min="5" max="30" step="1" value={years} onChange={(e) => setYears(+e.target.value)} /></label>
       </div>
       <div className="emi-out">
-        <div><small>Monthly EMI</small><b className="gold">{inr(monthly)}</b></div>
+        <div><small>Monthly EMI</small><b>{inr(monthly)}</b></div>
         <div><small>Loan amount</small><b>{inr(principal)}</b></div>
         <div><small>Total interest</small><b>{inr(total - principal)}</b></div>
       </div>

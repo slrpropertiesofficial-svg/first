@@ -2,7 +2,7 @@ import { GROUPS } from "../utils/categories.js";
 import { EMAIL, INSTAGRAM, PHONE_PRETTY, TEL, WA } from "../utils/contact.js";
 import { Link } from "../utils/router.jsx";
 import Icon from "./Icon.jsx";
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo-full.png";
 
 export default function Footer({ onPick }) {
   return (

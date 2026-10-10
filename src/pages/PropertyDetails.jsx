@@ -71,7 +71,7 @@ export default function PropertyDetails({ id }) {
               <div><span className="eyebrow"><i className="fa-solid fa-location-dot" /> {p.location}</span>
                 <h1 className="page-h">{p.title}</h1>
                 {off && <span className="badge st" style={{ marginTop: ".5rem", display: "inline-block" }}>{p.status}</span>}</div>
-              <div className="mprice"><small>{rent ? "Rent" : "Price"}</small><b className="gold">{p.price_display}</b></div>
+              <div className="mprice"><small>{rent ? "Rent" : "Price"}</small><b>{p.price_display}</b></div>
             </header>
 
             <h2 className="sub-h">Property overview</h2>

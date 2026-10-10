@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { GROUPS } from "../utils/categories.js";
 import { WA } from "../utils/contact.js";
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo-mark.png";
 import { Link } from "../utils/router.jsx";
 
 export default function Header({ onPick, savedCount }) {

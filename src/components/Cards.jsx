@@ -9,8 +9,8 @@ export default function Cards({ p, saved, toggleSaved, onEnquire }) {
   const off = p.status && p.status !== "Available";
   const path = propertyPath(p);
   return (
-    <article className={`card ${off ? "off" : ""}`}>
-      <div className="media" onClick={() => navigate(path)}>
+    <article className={`card ${off ? "off" : ""}`} onClick={(e) => { if (!e.target.closest("a,button")) navigate(path); }}>
+      <div className="media">
         <Media u={p.image_url} />
         <div className="badges">
           <span className="badge">{info(p.category).sub}</span>
@@ -29,9 +29,8 @@ export default function Cards({ p, saved, toggleSaved, onEnquire }) {
           {specsFor(p).map((s) => <div key={s[2]}><b><i className={`fa-solid ${s[0]}`} />{s[1]}</b><small>{s[2]}</small></div>)}
         </div>
         <div className="foot">
-          <div className="price"><small>Price</small><b className="gold">{p.price_display}</b></div>
+          <div className="price"><small>Price</small><b>{p.price_display}</b></div>
           <div className="acts">
-            <Link className="icon-btn" to={path} aria-label={`View details of ${p.title}`}><i className="fa-solid fa-eye" /></Link>
             <WhatsAppButton p={p} iconOnly />
             <Button disabled={off} onClick={() => onEnquire(p)}>{off ? p.status : "Enquire"}</Button>
           </div>

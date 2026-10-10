@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { AppProvider } from "./context/AppContext.jsx";
 import Layout from "./components/Layout.jsx";
+import Splash from "./components/Splash.jsx";
 import Home from "./pages/Home.jsx";
 import Favorites from "./pages/Favorites.jsx";
 import PropertyDetails from "./pages/PropertyDetails.jsx";
@@ -40,5 +41,5 @@ function Routes() {
 }
 
 export default function App() {
-  return <AppProvider><Routes /></AppProvider>;
+  return <AppProvider><Splash /><Routes /></AppProvider>;
 }

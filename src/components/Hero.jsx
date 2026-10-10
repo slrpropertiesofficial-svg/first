@@ -29,7 +29,7 @@ export default function Hero({ all, onSearch }) {
     <div className="hero">
       <div className="hero-bg" role="img" aria-label="Luxury home exterior" />
       <div className="wrap hero-in">
-        <h1>Find Your Perfect <span className="gold">Property</span></h1>
+        <h1>Find Your Perfect Property</h1>
         <p className="slogan">Securing Your Space in the Future.</p>
         <p className="lead">Houses, apartments, villas, sites, agricultural land and commercial rental properties, with personal assistance at every step.</p>
 

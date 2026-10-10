@@ -1,4 +1,4 @@
-import logo from "../assets/logo.jpg";
+import logo from "../assets/logo-full.png";
 import Icon from "./Icon.jsx";
 
 const cards = [
