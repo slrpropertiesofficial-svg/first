@@ -44,7 +44,8 @@ section.alt,.alt{background:var(--surface2)}
 .brand-t{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 .brand-t b{font-family:'Newsreader',serif;font-size:1.15rem;font-weight:700;letter-spacing:.04em;color:var(--ink);white-space:nowrap}
 .brand-t small{font-size:.7rem;color:var(--muted);white-space:nowrap}
-@media(max-width:1280px){.brand-t small{display:none}}
+@media(min-width:1001px) and (max-width:1280px){.brand-t small{display:none}}
+@media(max-width:520px){.brand-t small{font-size:.62rem}.brand-t b{font-size:1.02rem}}
 .burger{display:none;flex:none;width:44px;height:44px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--ink);position:relative}
 .burger i,.burger i::before,.burger i::after{display:block;width:20px;height:2px;background:currentColor;border-radius:2px;transition:transform .25s,top .25s,background .25s}
 .burger i{position:absolute;left:11px;top:20px}.burger i::before,.burger i::after{content:"";position:absolute;left:0}
