@@ -18,8 +18,23 @@ CREATE TABLE IF NOT EXISTS properties (
     images_json TEXT,
     is_featured INTEGER DEFAULT 0,
     status TEXT DEFAULT 'Available',
+    lat REAL,
+    lng REAL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Owner OTP login (only needed if you set the database up by hand)
+CREATE TABLE IF NOT EXISTS login_otps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code_hash TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL
+);
+
+-- Existing database from an older version? Run these two once:
+-- ALTER TABLE properties ADD COLUMN lat REAL;
+-- ALTER TABLE properties ADD COLUMN lng REAL;
 
 CREATE TABLE IF NOT EXISTS inquiries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

@@ -3,10 +3,11 @@ import { api } from "../utils/api.js";
 import { GROUPS, info, isRent } from "../utils/categories.js";
 import { isVideo, safeUrl, gallery as galleryOf } from "../utils/property.js";
 import { priceLabel, store } from "../utils/format.js";
+import { embedUrl, parsePin } from "../utils/geo.js";
 import "../styles/admin.css";
 
 const STATUSES = ["Available", "Under Offer", "Sold", "Rented"];
-const EMPTY = { title: "", category: "Houses", location: "", price: "", price_display: "", beds: 0, baths: 0, sqft: 2400, description: "", is_featured: false, status: "Available" };
+const EMPTY = { title: "", category: "Houses", location: "", price: "", price_display: "", beds: 0, baths: 0, sqft: 2400, description: "", is_featured: false, status: "Available", lat: "", lng: "" };
 const MAX_IMG = 10 * 1024 * 1024, MAX_VID = 50 * 1024 * 1024;
 
 const Thumb = ({ u }) => isVideo(u)
@@ -20,6 +21,71 @@ export default function Admin() {
 }
 
 function Login({ onDone }) {
+  const [mode, setMode] = useState(null); // null = checking | { otp, password }
+  useEffect(() => { api.authMode().then((r) => setMode(r.ok ? r.data : { otp: false, password: true })).catch(() => setMode({ otp: false, password: true })); }, []);
+  if (!mode) return <div className="login"><div className="login-card"><p className="muted">Loading…</p></div></div>;
+  return mode.otp ? <OtpLogin onDone={onDone} password={mode.password} /> : <PasswordLogin onDone={onDone} />;
+}
+
+function OtpLogin({ onDone, password }) {
+  const [email, setEmail] = useState(() => store.get("slr_owner_email", ""));
+  const [code, setCode] = useState("");
+  const [sent, setSent] = useState(false);
+  const [wait, setWait] = useState(0);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [usePw, setUsePw] = useState(false);
+
+  useEffect(() => { if (wait <= 0) return; const t = setTimeout(() => setWait(wait - 1), 1000); return () => clearTimeout(t); }, [wait]);
+
+  const send = async (e) => {
+    e?.preventDefault(); setBusy(true); setErr("");
+    try {
+      const r = await api.otpRequest(email.trim());
+      if (r.ok) { store.set("slr_owner_email", email.trim()); setSent(true); setCode(""); setWait(r.data.resend_in || 60); }
+      else setErr(r.data.detail || "Could not send the code.");
+    } catch { setErr("Cannot reach the server. Check your connection."); }
+    setBusy(false);
+  };
+  const verify = async (e) => {
+    e.preventDefault(); setBusy(true); setErr("");
+    try {
+      const r = await api.otpVerify(email.trim(), code);
+      r.ok ? onDone(r.data.token) : setErr(r.data.detail || "Sign-in failed.");
+    } catch { setErr("Cannot reach the server. Check your connection."); }
+    setBusy(false);
+  };
+
+  if (usePw) return <PasswordLogin onDone={onDone} onBack={() => setUsePw(false)} />;
+  return (
+    <div className="login">
+      <form className="login-card" onSubmit={sent ? verify : send}>
+        <img src="/logo.jpg" alt="SLR Properties" />
+        <h1>Owner portal</h1>
+        <p className="q">"Securing Your Space in the Future."</p>
+        {!sent ? (<>
+          <label>Owner email<input type="email" value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" required autoFocus /></label>
+          <p className="hint">We will email you a 6-digit login code.</p>
+          {err && <p className="err" role="alert">{err}</p>}
+          <button className="abtn gold-b" disabled={busy}>{busy ? "Sending…" : "Send login code"}</button>
+        </>) : (<>
+          <p className="hint">If <b>{email}</b> is the owner's email, a code is on its way. It works for 5 minutes.</p>
+          <label>6-digit code<input className="otp" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} placeholder="••••••" required autoFocus /></label>
+          {err && <p className="err" role="alert">{err}</p>}
+          <button className="abtn gold-b" disabled={busy || code.length !== 6}>{busy ? "Checking…" : "Sign in"}</button>
+          <div className="otp-row">
+            <button type="button" className="linkb" disabled={busy || wait > 0} onClick={send}>{wait > 0 ? `Resend code in ${wait}s` : "Resend code"}</button>
+            <button type="button" className="linkb" onClick={() => { setSent(false); setErr(""); }}>Change email</button>
+          </div>
+        </>)}
+        {password && <button type="button" className="linkb" onClick={() => setUsePw(true)}>Use password instead</button>}
+        <a href="/" className="back">← Back to website</a>
+      </form>
+    </div>
+  );
+}
+
+function PasswordLogin({ onDone, onBack }) {
   const [u, setU] = useState("");
   const [p, setP] = useState("");
   const [err, setErr] = useState("");
@@ -42,6 +108,7 @@ function Login({ onDone }) {
         <label>Password<input type="password" value={p} onChange={(e) => setP(e.target.value)} autoComplete="current-password" required /></label>
         {err && <p className="err" role="alert">{err}</p>}
         <button className="abtn gold-b" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+        {onBack && <button type="button" className="linkb" onClick={onBack}>Use email code instead</button>}
         <a href="/" className="back">← Back to website</a>
       </form>
     </div>
@@ -170,7 +237,7 @@ function Dashboard({ token, logout }) {
                     <td className="g">{i.property_title || "General"}</td>
                     <td className="msg">{i.message || "—"}</td>
                     <td className="acts">
-                      {i.whatsapp_url && <a className="abtn sm wa" href={i.whatsapp_url} target="_blank" rel="noopener" aria-label="Open WhatsApp"><i className="fa-brands fa-whatsapp" /></a>}
+                      {i.client_email && <a className="abtn sm mail" href={`mailto:${i.client_email}?subject=${encodeURIComponent(`Your enquiry - ${i.property_title || "SLR Properties"}`)}&body=${encodeURIComponent(`Hello ${i.client_name},\n\nThank you for your enquiry with SLR Properties.\n\n`)}`} aria-label={`Email ${i.client_name}`}><i className="fa-solid fa-envelope" /></a>}
                       <a className="abtn sm" href={`tel:${i.client_phone}`} aria-label="Call"><i className="fa-solid fa-phone" /></a>
                       <button className="abtn sm danger" onClick={() => removeInq(i)} aria-label="Delete enquiry"><i className="fa-solid fa-trash" /></button>
                     </td>
@@ -200,6 +267,8 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
   const [files, setFiles] = useState([]);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
+  const [pinText, setPinText] = useState("");
+  const [pinMsg, setPinMsg] = useState("");
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === "checkbox" ? e.target.checked : e.target.value });
   const rent = info(f.category).g?.id === "commercial";
   const resid = info(f.category).g?.id === "residential";
@@ -207,6 +276,15 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
   useEffect(() => { // keep the display price in sync until the owner edits it by hand
     if (autoPrice && f.price !== "") setF((x) => ({ ...x, price_display: priceLabel(Number(x.price), rent) }));
   }, [f.price, rent, autoPrice]);
+
+  const pin = f.lat !== "" && f.lat !== null && f.lng !== "" && f.lng !== null ? { lat: Number(f.lat), lng: Number(f.lng) } : null;
+  const readPin = (text) => {
+    setPinText(text);
+    if (!text.trim()) return setPinMsg("");
+    const got = parsePin(text);
+    if (got) { setF((x) => ({ ...x, lat: got.lat, lng: got.lng })); setPinMsg(""); }
+    else setPinMsg(/goo\.gl|maps\.app/i.test(text) ? "Short links cannot be read. Open the link, then copy the long address from the browser bar (it has @12.97…,77.64…)." : "Could not find a location in that. Paste the full Google Maps link, or the coordinates like 12.9784, 77.6408.");
+  };
 
   const upload = async (file, label) => {
     const vid = file.type.startsWith("video/");
@@ -228,7 +306,7 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
       const gallery = [...kept];
       for (let i = 0; i < files.length; i++) gallery.push(await upload(files[i], `gallery ${i + 1} of ${files.length}`));
       setBusy("Publishing…");
-      const body = { ...f, price: Number(f.price), beds: +f.beds || 0, baths: +f.baths || 0, sqft: +f.sqft || 0, image_url: coverUrl, images_json: JSON.stringify(gallery), is_featured: f.is_featured ? 1 : 0 };
+      const body = { ...f, lat: pin ? pin.lat : null, lng: pin ? pin.lng : null, price: Number(f.price), beds: +f.beds || 0, baths: +f.baths || 0, sqft: +f.sqft || 0, image_url: coverUrl, images_json: JSON.stringify(gallery), is_featured: f.is_featured ? 1 : 0 };
       const r = editing ? await api.updateProperty(initial.id, body, token) : await api.createProperty(body, token);
       if (r.code === 401) return logout();
       r.ok ? onSaved(editing ? "Property updated" : "Property published") : setErr(r.data.detail || "Could not save the property.");
@@ -254,6 +332,17 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
           {resid && <><label>Bedrooms<input type="number" min="0" value={f.beds} onChange={set("beds")} /></label>
             <label>Bathrooms<input type="number" min="0" value={f.baths} onChange={set("baths")} /></label></>}
           {!resid && rent && <label>Restrooms<input type="number" min="0" value={f.baths} onChange={set("baths")} /></label>}
+
+          <div className="span3 media-box">
+            <b>Map location <span className="opt">(optional, shows the exact pin on the website map)</span></b>
+            <input value={pinText} onChange={(e) => readPin(e.target.value)} placeholder="Paste a Google Maps link, or coordinates like 12.9784, 77.6408" />
+            <small>In Google Maps: find the plot, tap and hold to drop a pin, then copy the address bar link (or the coordinates shown). Leave empty to show the approximate area.</small>
+            {pinMsg && <p className="err" role="alert">{pinMsg}</p>}
+            {pin && (<>
+              <p className="pin-ok"><i className="fa-solid fa-location-dot" /> Pin set: {pin.lat}, {pin.lng} <button type="button" className="abtn sm" onClick={() => { setF({ ...f, lat: "", lng: "" }); setPinText(""); }}>Remove pin</button></p>
+              <iframe className="pin-prev" title="Pin preview" src={embedUrl({ lat: pin.lat, lng: pin.lng })} loading="lazy" />
+            </>)}
+          </div>
 
           <div className="span3 media-box">
             <b>Cover photo or video *</b>

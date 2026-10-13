@@ -1,14 +1,16 @@
 import { WA } from "../utils/contact.js";
 import { filterProperties } from "../utils/filters.js";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "../context/AppContext.jsx";
 import ComingSoon from "./ComingSoon.jsx";
 import FilterBar from "./FilterBar.jsx";
 import Cards from "./Cards.jsx";
+import MapView from "./MapView.jsx";
 
 export default function Listings() {
   const { all, state, filters, applyFilters, resetFilters, saved, toggleSaved, setEnquiry } = useApp();
   const list = useMemo(() => filterProperties(all, filters, saved), [all, filters, saved]);
+  const [view, setView] = useState("list"); // list | map
   const active = filters.q || filters.min || filters.max || filters.location !== "all" || filters.deal !== "all" || filters.group !== "all";
 
   return (
@@ -23,7 +25,16 @@ export default function Listings() {
           {active && state === "ready" && <button className="link" onClick={resetFilters}>Clear filters</button>}
         </p>
 
-        <div className="grid">
+        {state === "ready" && (
+          <div className="view-sw seg" role="group" aria-label="List or map view">
+            <button className={view === "list" ? "on" : ""} aria-pressed={view === "list"} onClick={() => setView("list")}><i className="fa-solid fa-list" /> List</button>
+            <button className={view === "map" ? "on" : ""} aria-pressed={view === "map"} onClick={() => setView("map")}><i className="fa-solid fa-map-location-dot" /> Map</button>
+          </div>
+        )}
+
+        {state === "ready" && view === "map" && <MapView list={list} />}
+
+        <div className="grid" hidden={view === "map" && state === "ready"}>
           {state === "loading" && [0, 1, 2].map((i) => <div className="skel" key={i} />)}
           {state === "error" && (
             <div className="empty"><i className="fa-solid fa-circle-exclamation" /><h3>Listings could not be loaded</h3>

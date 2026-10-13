@@ -1,11 +1,20 @@
 // SLR PROPERTIES - Cloudflare Pages Function (catch-all for /api/*)
 // Bindings (set in the Cloudflare dashboard):  DB = D1 database,  BUCKET = R2 bucket
-// Variables/secrets (set in dashboard):         ADMIN_USERNAME, ADMIN_PASSWORD
+// Variables/secrets (set in dashboard):
+//   OWNER_EMAIL      - the only address that can receive a login code
+//   RESEND_API_KEY   - secret, from resend.com (sends the OTP email)
+//   RESEND_FROM      - e.g. "SLR Properties <login@yourdomain.com>" (domain verified in Resend)
+//   SESSION_SECRET   - secret, any long random text (signs the login session)
+//   ALLOW_PASSWORD_LOGIN, ADMIN_USERNAME, ADMIN_PASSWORD - optional backup password login
 
 const WHATSAPP_PHONE = "919964957015";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // keep videos compressed; larger files can be linked by URL
 const TOKEN_TTL_SECONDS = 60 * 60 * 12; // 12 hours
+const OTP_TTL_SECONDS = 5 * 60;        // a code is valid for 5 minutes
+const OTP_MAX_ATTEMPTS = 5;            // wrong tries before the code is burned
+const OTP_RESEND_SECONDS = 60;         // minimum gap between two code requests
+const OTP_MAX_PER_HOUR = 5;            // code requests per hour
 const ALLOWED_MEDIA_TYPES = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -34,7 +43,16 @@ const SCHEMA = [
     images_json TEXT,
     is_featured INTEGER DEFAULT 0,
     status TEXT DEFAULT 'Available',
+    lat REAL,
+    lng REAL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )`,
+  `CREATE TABLE IF NOT EXISTS login_otps (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code_hash TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    attempts INTEGER DEFAULT 0,
+    created_at INTEGER NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS inquiries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -87,6 +105,10 @@ let schemaReady = false;
 async function ensureSchema(db) {
   if (schemaReady) return;
   await db.batch(SCHEMA.map((s) => db.prepare(s)));
+  // Databases created before the map feature need the two coordinate columns added once.
+  for (const col of ["lat", "lng"]) {
+    try { await db.prepare(`ALTER TABLE properties ADD COLUMN ${col} REAL`).run(); } catch { /* already there */ }
+  }
   const row = await db.prepare("SELECT COUNT(*) AS c FROM properties").first();
   if (!row || row.c === 0) {
     const stmt = db.prepare(
@@ -112,15 +134,17 @@ function safeEqual(a, b) {
   for (let i = 0; i < a.length; i++) r |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return r === 0;
 }
+const sessionSecret = (env) => env.SESSION_SECRET || env.ADMIN_PASSWORD || "";
 async function makeToken(env) {
   const exp = Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
-  return `${exp}.${await hmac(env.ADMIN_PASSWORD, `slr-admin:${env.ADMIN_USERNAME}:${exp}`)}`;
+  return `${exp}.${await hmac(sessionSecret(env), `slr-admin:${exp}`)}`;
 }
 async function isAdmin(request, env) {
+  if (!sessionSecret(env)) return false;
   const token = request.headers.get("X-Admin-Password") || "";
   const [exp, sig] = token.split(".");
   if (!exp || !sig || Number(exp) < Date.now() / 1000) return false;
-  const expected = await hmac(env.ADMIN_PASSWORD, `slr-admin:${env.ADMIN_USERNAME}:${exp}`);
+  const expected = await hmac(sessionSecret(env), `slr-admin:${exp}`);
   return safeEqual(sig, expected);
 }
 
@@ -158,8 +182,85 @@ async function getProperty(id, env) {
   return row ? json({ status: "success", data: row }) : fail(404, "Property not found");
 }
 
+const otpReady = (env) => !!(env.OWNER_EMAIL && env.RESEND_API_KEY && env.RESEND_FROM && sessionSecret(env));
+const passwordAllowed = (env) => !!(env.ADMIN_USERNAME && env.ADMIN_PASSWORD) && (!otpReady(env) || String(env.ALLOW_PASSWORD_LOGIN).toLowerCase() === "true");
+const sameEmail = (a, b) => safeEqual(String(a || "").trim().toLowerCase(), String(b || "").trim().toLowerCase());
+
+// Tells the sign-in screen which method to show.
+function authMode(env) {
+  return json({ status: "success", otp: otpReady(env), password: passwordAllowed(env) });
+}
+
+// Uniform 6-digit code (rejection sampling, no modulo bias).
+function sixDigits() {
+  const a = new Uint32Array(1);
+  do { crypto.getRandomValues(a); } while (a[0] >= 4294000000);
+  return String(a[0] % 1000000).padStart(6, "0");
+}
+const otpHash = (env, code) => hmac(sessionSecret(env), `slr-otp:${code}`);
+
+async function sendOtpEmail(env, code) {
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.RESEND_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      from: env.RESEND_FROM,
+      to: [env.OWNER_EMAIL],
+      subject: `${code} is your SLR Properties login code`,
+      text: `Your SLR Properties owner login code is ${code}.\n\nIt works for 5 minutes. If you did not ask for it, ignore this email and nobody can sign in.`,
+      html: `<div style="font-family:Arial,sans-serif;max-width:420px"><p>Your SLR Properties owner login code:</p><p style="font-size:34px;letter-spacing:8px;font-weight:700;margin:12px 0">${code}</p><p style="color:#555">It works for 5 minutes. If you did not ask for it, ignore this email and nobody can sign in.</p></div>`,
+    }),
+  });
+  if (!res.ok) console.error("Resend error", res.status, await res.text().catch(() => ""));
+  return res.ok;
+}
+
+// Step 1: owner types their email -> a code is mailed (only if it is the owner's address).
+async function otpRequest(request, env) {
+  if (!otpReady(env)) return fail(500, "OTP login is not configured. Add OWNER_EMAIL, RESEND_API_KEY, RESEND_FROM and SESSION_SECRET in Cloudflare.");
+  const body = await readJson(request);
+  if (!body) return fail(400, "Invalid request body");
+  const generic = json({ status: "success", message: "If that email is registered, a login code has been sent.", resend_in: OTP_RESEND_SECONDS });
+  if (!sameEmail(body.email, env.OWNER_EMAIL)) return generic; // never reveal which email is the owner's
+
+  const now = Math.floor(Date.now() / 1000);
+  await env.DB.prepare("DELETE FROM login_otps WHERE expires_at < ?").bind(now - 3600).run();
+  const last = await env.DB.prepare("SELECT created_at FROM login_otps ORDER BY id DESC LIMIT 1").first();
+  if (last && now - last.created_at < OTP_RESEND_SECONDS)
+    return fail(429, `Please wait ${OTP_RESEND_SECONDS - (now - last.created_at)} seconds before asking for another code.`);
+  const hour = await env.DB.prepare("SELECT COUNT(*) AS c FROM login_otps WHERE created_at > ?").bind(now - 3600).first();
+  if (hour && hour.c >= OTP_MAX_PER_HOUR) return fail(429, "Too many code requests. Please try again in an hour.");
+
+  const code = sixDigits();
+  await env.DB.prepare("INSERT INTO login_otps (code_hash, expires_at, attempts, created_at) VALUES (?, ?, 0, ?)")
+    .bind(await otpHash(env, code), now + OTP_TTL_SECONDS, now).run();
+  if (!(await sendOtpEmail(env, code))) return fail(502, "The code could not be emailed. Check the Resend settings in Cloudflare.");
+  return generic;
+}
+
+// Step 2: owner types the 6-digit code -> session token.
+async function otpVerify(request, env) {
+  if (!otpReady(env)) return fail(500, "OTP login is not configured.");
+  const body = await readJson(request);
+  const code = String(body?.code ?? "").replace(/\D/g, "");
+  if (!body || !sameEmail(body.email, env.OWNER_EMAIL) || code.length !== 6) return fail(401, "Invalid or expired code");
+
+  const now = Math.floor(Date.now() / 1000);
+  const row = await env.DB.prepare("SELECT id, code_hash, attempts FROM login_otps WHERE expires_at > ? AND attempts < ? ORDER BY id DESC LIMIT 1")
+    .bind(now, OTP_MAX_ATTEMPTS).first();
+  if (!row) return fail(401, "Invalid or expired code. Ask for a new one.");
+  await env.DB.prepare("UPDATE login_otps SET attempts = attempts + 1 WHERE id = ?").bind(row.id).run();
+  if (!safeEqual(row.code_hash, await otpHash(env, code))) {
+    const left = OTP_MAX_ATTEMPTS - row.attempts - 1;
+    return fail(401, left > 0 ? `Wrong code. ${left} ${left === 1 ? "try" : "tries"} left.` : "Wrong code. Ask for a new one.");
+  }
+  await env.DB.prepare("DELETE FROM login_otps").run(); // a code works only once
+  return json({ status: "success", message: "Admin authentication successful", token: await makeToken(env) });
+}
+
+// Backup sign-in with username + password (only when OTP is not set up, or ALLOW_PASSWORD_LOGIN=true).
 async function adminLogin(request, env) {
-  if (!env.ADMIN_USERNAME || !env.ADMIN_PASSWORD) return fail(500, "ADMIN_USERNAME / ADMIN_PASSWORD are not configured in Cloudflare.");
+  if (!passwordAllowed(env)) return fail(403, "Password sign-in is turned off. Use the email code.");
   const body = await readJson(request);
   if (!body) return fail(400, "Invalid request body");
   const okUser = safeEqual(str(body.username), env.ADMIN_USERNAME);
@@ -182,15 +283,20 @@ function parseProperty(b) {
   if (!Array.isArray(gallery) || gallery.length > 30 || !gallery.every((u) => typeof u === "string" && isHttpOrLocal(u)))
     return { error: fail(422, "Gallery must be a list of uploaded files or http(s) links") };
   const status = ["Available", "Sold", "Rented", "Under Offer"].includes(str(b.status)) ? str(b.status) : "Available";
-  return { v: [title, category, price, price_display, location, int(b.beds), int(b.baths), sqft, description, image_url, JSON.stringify(gallery), b.is_featured ? 1 : 0, status] };
+  // Map pin (optional). Both or neither; must be a real coordinate.
+  const hasPin = b.lat !== null && b.lat !== undefined && b.lat !== "" && b.lng !== null && b.lng !== undefined && b.lng !== "";
+  const lat = hasPin ? Number(b.lat) : null, lng = hasPin ? Number(b.lng) : null;
+  if (hasPin && !(Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180))
+    return { error: fail(422, "Map location must be a valid latitude and longitude") };
+  return { v: [title, category, price, price_display, location, int(b.beds), int(b.baths), sqft, description, image_url, JSON.stringify(gallery), b.is_featured ? 1 : 0, status, lat, lng] };
 }
 
 async function createProperty(request, env) {
   const { v, error } = parseProperty(await readJson(request));
   if (error) return error;
   const res = await env.DB.prepare(
-    `INSERT INTO properties (title, category, price, price_display, location, beds, baths, sqft, description, image_url, images_json, is_featured, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO properties (title, category, price, price_display, location, beds, baths, sqft, description, image_url, images_json, is_featured, status, lat, lng)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(...v).run();
   return json({ status: "success", message: "Property added successfully", id: res.meta.last_row_id });
 }
@@ -201,7 +307,7 @@ async function updateProperty(id, request, env) {
   const { v, error } = parseProperty(await readJson(request));
   if (error) return error;
   await env.DB.prepare(
-    `UPDATE properties SET title=?, category=?, price=?, price_display=?, location=?, beds=?, baths=?, sqft=?, description=?, image_url=?, images_json=?, is_featured=?, status=? WHERE id=?`
+    `UPDATE properties SET title=?, category=?, price=?, price_display=?, location=?, beds=?, baths=?, sqft=?, description=?, image_url=?, images_json=?, is_featured=?, status=?, lat=?, lng=? WHERE id=?`
   ).bind(...v, id).run();
   // Remove R2 files that are no longer used by this listing
   try {
@@ -320,10 +426,13 @@ export async function onRequest({ request, env }) {
     if (m && method === "GET") return getProperty(Number(m[1]), env);
 
     if (path === "/api/inquiries" && method === "POST") return createInquiry(request, env);
+    if (path === "/api/admin/auth-mode" && method === "GET") return authMode(env);
+    if (path === "/api/admin/otp/request" && method === "POST") return otpRequest(request, env);
+    if (path === "/api/admin/otp/verify" && method === "POST") return otpVerify(request, env);
     if (path === "/api/admin/login" && method === "POST") return adminLogin(request, env);
 
     if (path.startsWith("/api/admin/")) {
-      if (!env.ADMIN_PASSWORD || !(await isAdmin(request, env))) return fail(401, "Unauthorized admin action");
+      if (!(await isAdmin(request, env))) return fail(401, "Unauthorized admin action");
       if (path === "/api/admin/properties" && method === "POST") return createProperty(request, env);
       m = path.match(/^\/api\/admin\/properties\/(\d+)$/);
       if (m && method === "PUT") return updateProperty(Number(m[1]), request, env);

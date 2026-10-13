@@ -42,7 +42,7 @@ Advanced search (sale/rent, type, location, min/max budget) · property detail p
    - Build command: `npm run build`
    - Build output directory: `dist`
 5. Project → **Settings → Bindings**: D1 `DB` → `slr-properties-db`; R2 `BUCKET` → `slr-properties-images`.
-6. **Variables and Secrets**: `ADMIN_USERNAME`, `ADMIN_PASSWORD` (secrets).
+6. **Variables and Secrets** (see "Owner login by email code" and "Google Map" below).
 7. **Deployments → Retry deployment**. Tables and six sample listings are created on first visit. Sign in at `/admin`.
 
 ## Run locally
@@ -63,3 +63,32 @@ For the full stack locally, run `npm run build` then `npx wrangler pages dev dis
 | GET / DELETE | `/api/admin/inquiries[/{id}]` | admin token |
 
 Uploads: images up to 10 MB, videos (MP4/WEBM/MOV) up to 50 MB.
+
+
+## Owner login by email code (OTP)
+The owner enters their email at `/admin`, gets a 6-digit code (valid 5 minutes, one use), and is signed in for 12 hours. Only `OWNER_EMAIL` ever receives a code. 5 wrong tries burn the code, one request per minute, 5 per hour.
+
+1. Create a free account at **resend.com**, add and verify your domain (adds a few DNS records in Cloudflare), and create an **API key**.
+   *Quick test without a domain:* use `RESEND_FROM = onboarding@resend.dev`; Resend then only delivers to the email you signed up with, so set `OWNER_EMAIL` to that.
+2. Cloudflare → Pages project → **Settings → Variables and Secrets**, add:
+
+| Name | Type | Example |
+| --- | --- | --- |
+| `OWNER_EMAIL` | Text | owner@yourdomain.com |
+| `RESEND_API_KEY` | Secret | re_xxxxxxxx |
+| `RESEND_FROM` | Text | SLR Properties <login@yourdomain.com> |
+| `SESSION_SECRET` | Secret | any long random text |
+
+3. Redeploy. The password form disappears. To keep the old password as a backup, leave `ADMIN_USERNAME` / `ADMIN_PASSWORD` set and add `ALLOW_PASSWORD_LOGIN = true`. If the OTP variables are missing, the site falls back to the password form so you are never locked out.
+
+## Google Map
+- **Browse page:** a List / Map switch above the listings. Pins follow the category / buy-rent / budget filters; tapping a pin shows photo, price, *View details* and *Directions*. The old Location dropdown is removed.
+- **Property page:** a Location section with the map and *Get directions* / *Open in Google Maps*.
+- **Owner console:** each listing has an optional *Map location* field. Paste a Google Maps link (or `12.9784, 77.6408`) to set the exact pin. Without it the pin sits at the centre of the area (marked "Approximate area").
+
+Setup:
+1. Google Cloud Console → create a project → enable **Maps JavaScript API** → create an **API key**.
+2. Restrict the key: *HTTP referrers* = your site domain(s); *API restrictions* = Maps JavaScript API only.
+3. Cloudflare Pages → **Settings → Variables and Secrets** → add `VITE_GOOGLE_MAPS_KEY` (Text) as a **build** variable, then redeploy (it is baked in at build time; a browser key is public by design, so the referrer restriction is what protects it).
+
+Existing databases get the new `lat` / `lng` columns and the `login_otps` table automatically on the first request.

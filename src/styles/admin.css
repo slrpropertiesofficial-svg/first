@@ -53,3 +53,11 @@
 .kept{display:flex;flex-wrap:wrap;gap:.6rem}.k{position:relative}.k .thumb{width:72px;height:56px}
 .k button{position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;border:0;background:#dc2626;color:#fff;font-size:.65rem;cursor:pointer}
 .toast{position:fixed;z-index:90;left:50%;bottom:1.5rem;translate:-50% 0;padding:.7rem 1.2rem;border-radius:12px;background:#16243f;border:1px solid var(--g);color:#f3e5ab;font-size:.88rem;box-shadow:0 12px 30px -8px rgba(0,0,0,.8)}
+.login-card .hint{margin:0;font-size:.82rem;color:#9a9aa2;text-align:left}.login-card .hint b{color:#f3e5ab;overflow-wrap:anywhere}
+.login-card input.otp{text-align:center;font-size:1.6rem;letter-spacing:.5em;padding-left:.9em;font-variant-numeric:tabular-nums}
+.otp-row{display:flex;justify-content:space-between;gap:.5rem}
+.linkb{background:none;border:0;padding:.3rem;color:#f3e5ab;font:inherit;font-size:.82rem;text-decoration:underline;cursor:pointer}.linkb:disabled{color:#6b6b73;text-decoration:none;cursor:default}
+.opt{font-weight:400;color:#6b6b73}
+.pin-ok{margin:0;display:flex;flex-wrap:wrap;align-items:center;gap:.6rem;color:#34d399;font-size:.85rem}
+.pin-prev{width:100%;height:200px;border:1px solid var(--bd);border-radius:12px;background:#000}
+.abtn.mail{color:#60a5fa;border-color:rgba(96,165,250,.35)}.abtn.mail:hover{background:#3b82f6;border-color:#3b82f6;color:#fff}

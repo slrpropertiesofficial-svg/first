@@ -1,5 +1,4 @@
 import { GROUPS, BUY_BUDGETS, RENT_BUDGETS } from "../utils/categories.js";
-import { locationsOf } from "../utils/filters.js";
 import { priceLabel } from "../utils/format.js";
 
 // Advanced search: sale/rent, type, location, min/max budget, keyword, sort.
@@ -27,11 +26,6 @@ export default function FilterBar({ all, filters, setFilters }) {
             <button key={v} className={filters.deal === v ? "on" : ""} onClick={() => setFilters({ deal: v })}>{l}</button>
           ))}
         </div>
-        <div className="field inline"><label htmlFor="lloc" className="sr">Location</label>
-          <select id="lloc" value={filters.location} onChange={(e) => setFilters({ location: e.target.value })}>
-            <option value="all">All locations</option>
-            {locationsOf(all).map((l) => <option key={l} value={l}>{l}</option>)}
-          </select></div>
         <div className="field inline"><label htmlFor="lq" className="sr">Search</label>
           <input id="lq" type="search" placeholder="Search keyword" value={filters.q} onChange={(e) => setFilters({ q: e.target.value })} /></div>
         <div className="field inline"><label htmlFor="lsort" className="sr">Sort</label>

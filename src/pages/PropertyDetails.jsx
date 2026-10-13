@@ -4,6 +4,7 @@ import { info, isRent } from "../utils/categories.js";
 import { inr } from "../utils/format.js";
 import { TEL, PHONE_PRETTY, mailLink } from "../utils/contact.js";
 import { areaOf, gallery as galleryOf, highlightsOf, propertyPath } from "../utils/property.js";
+import { directionsUrl, embedUrl, hasPin, openMapUrl } from "../utils/geo.js";
 import { Link } from "../utils/router.jsx";
 import Seo from "../components/Seo.jsx";
 import Gallery from "../components/Gallery.jsx";
@@ -84,6 +85,16 @@ export default function PropertyDetails({ id }) {
               <h2 className="sub-h gap">Highlights</h2>
               <ul className="amen">{hl.map((a) => <li key={a.label}><i className={`fa-solid ${a.icon}`} />{a.label}</li>)}</ul>
             </>)}
+
+            <h2 className="sub-h gap">Location</h2>
+            <div className="loc-map">
+              <iframe title={`Map of ${p.title}`} src={embedUrl(p)} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen />
+            </div>
+            <div className="loc-acts">
+              <a className="btn" href={directionsUrl(p)} target="_blank" rel="noopener"><i className="fa-solid fa-diamond-turn-right" /> Get directions</a>
+              <a className="btn ghost" href={openMapUrl(p)} target="_blank" rel="noopener"><i className="fa-solid fa-map-location-dot" /> Open in Google Maps</a>
+            </div>
+            {!hasPin(p) && <p className="loc-note">Map shows the approximate area. Ask us for the exact site location.</p>}
 
             {!rent && p.price > 0 && <EmiCalculator price={p.price} />}
           </div>

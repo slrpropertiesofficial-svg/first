@@ -14,6 +14,9 @@ const auth = (token, method = "GET") => ({ method, headers: { "X-Admin-Password"
 export const api = {
   properties: () => call("/api/properties"),
   inquiry: (b) => call("/api/inquiries", json("POST", b)),
+  authMode: () => call("/api/admin/auth-mode"),
+  otpRequest: (email) => call("/api/admin/otp/request", json("POST", { email })),
+  otpVerify: (email, code) => call("/api/admin/otp/verify", json("POST", { email, code })),
   login: (username, password) => call("/api/admin/login", json("POST", { username, password })),
   adminInquiries: (t) => call("/api/admin/inquiries", auth(t)),
   createProperty: (b, t) => call("/api/admin/properties", json("POST", b, t)),
