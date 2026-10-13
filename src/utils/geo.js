@@ -1,7 +1,6 @@
 // Map helpers. Each listing can carry an exact pin (lat/lng, set in the owner console).
 // Listings without one fall back to the centre of their area, marked "approximate".
 
-export const MAPS_KEY = import.meta.env.VITE_GOOGLE_MAPS_KEY || "";
 export const BENGALURU = { lat: 12.9716, lng: 77.5946 };
 
 // Approximate area centres (checked against the whole location text, longest name first).
@@ -56,16 +55,21 @@ export function parsePin(text) {
   return null;
 }
 
+// Leaflet (free OpenStreetMap map library), loaded only when the Map view is opened.
 let loader;
-export function loadGoogleMaps() {
-  if (!MAPS_KEY) return Promise.reject(new Error("no-key"));
-  if (window.google?.maps) return Promise.resolve(window.google.maps);
+export function loadLeaflet() {
+  if (window.L) return Promise.resolve(window.L);
   if (loader) return loader;
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
   loader = new Promise((resolve, reject) => {
-    window.__slrMapsReady = () => resolve(window.google.maps);
+    if (!document.getElementById("leaflet-css")) {
+      const l = document.createElement("link");
+      l.id = "leaflet-css"; l.rel = "stylesheet"; l.href = base + "leaflet.min.css";
+      document.head.appendChild(l);
+    }
     const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(MAPS_KEY)}&callback=__slrMapsReady&loading=async&v=weekly`;
-    s.async = true;
+    s.src = base + "leaflet.min.js"; s.async = true;
+    s.onload = () => resolve(window.L);
     s.onerror = () => { loader = null; reject(new Error("load-failed")); };
     document.head.appendChild(s);
   });

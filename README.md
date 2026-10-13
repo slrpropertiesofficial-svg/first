@@ -42,7 +42,7 @@ Advanced search (sale/rent, type, location, min/max budget) · property detail p
    - Build command: `npm run build`
    - Build output directory: `dist`
 5. Project → **Settings → Bindings**: D1 `DB` → `slr-properties-db`; R2 `BUCKET` → `slr-properties-images`.
-6. **Variables and Secrets** (see "Owner login by email code" and "Google Map" below).
+6. **Variables and Secrets** (see "Owner login by email code" below).
 7. **Deployments → Retry deployment**. Tables and six sample listings are created on first visit. Sign in at `/admin`.
 
 ## Run locally
@@ -86,9 +86,6 @@ The owner enters their email at `/admin`, gets a 6-digit code (valid 5 minutes, 
 - **Property page:** a Location section with the map and *Get directions* / *Open in Google Maps*.
 - **Owner console:** each listing has an optional *Map location* field. Paste a Google Maps link (or `12.9784, 77.6408`) to set the exact pin. Without it the pin sits at the centre of the area (marked "Approximate area").
 
-Setup:
-1. Google Cloud Console → create a project → enable **Maps JavaScript API** → create an **API key**.
-2. Restrict the key: *HTTP referrers* = your site domain(s); *API restrictions* = Maps JavaScript API only.
-3. Cloudflare Pages → **Settings → Variables and Secrets** → add `VITE_GOOGLE_MAPS_KEY` (Text) as a **build** variable, then redeploy (it is baked in at build time; a browser key is public by design, so the referrer restriction is what protects it).
+The map is **OpenStreetMap (Leaflet)**: free, no API key, no billing, nothing to set up. *Get directions* opens Google Maps and is also free.
 
 Existing databases get the new `lat` / `lng` columns and the `login_otps` table automatically on the first request.
