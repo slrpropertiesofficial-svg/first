@@ -1,7 +1,7 @@
 async function call(url, opts = {}) {
   const res = await fetch(url, opts);
   let data = {};
-  try { data = await res.json(); } catch { /* non-JSON */ }
+  try { data = await res.json(); } catch { }
   return { ok: res.ok && data.status === "success", code: res.status, data };
 }
 const json = (method, body, token) => ({

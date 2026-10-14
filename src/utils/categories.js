@@ -7,7 +7,6 @@ export const GROUPS = [
     img: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=900&q=70" },
 ];
 
-// Works with both the new category names and the legacy ones from the first version.
 export function info(cat) {
   for (const g of GROUPS) {
     if (g.subs.includes(cat)) return { g, sub: cat };

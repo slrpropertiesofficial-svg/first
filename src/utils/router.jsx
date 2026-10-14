@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 
-// Tiny History-API router (no extra dependency).
 export function navigate(to, { replace = false } = {}) {
   history[replace ? "replaceState" : "pushState"](null, "", to);
   window.dispatchEvent(new Event("slr:nav"));

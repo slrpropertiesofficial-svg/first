@@ -1,6 +1,5 @@
 import { useState } from "react";
 
-// items: [[question, answer], ...]
 export default function Accordion({ items }) {
   const [open, setOpen] = useState(0);
   return (

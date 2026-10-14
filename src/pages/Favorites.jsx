@@ -1,6 +1,9 @@
 import { useApp } from "../context/AppContext.jsx";
 import { Link } from "../utils/router.jsx";
 import Seo from "../components/Seo.jsx";
+import { metaFor } from "../utils/seo.js";
+
+const META = metaFor({ type: "favorites", path: "/favorites" }, [], "");
 import Cards from "../components/Cards.jsx";
 
 export default function Favorites() {
@@ -8,7 +11,7 @@ export default function Favorites() {
   const list = all.filter((p) => saved.includes(p.id));
   return (
     <section className="page" aria-labelledby="fav-h">
-      <Seo title="Your Favorite Properties" path="/favorites" noindex description="Properties you have saved on SLR PROPERTIES. Saved on this device only." />
+      <Seo meta={META} />
       <div className="wrap">
         <div className="sec-head"><div><span className="eyebrow">Saved on this device</span><h1 id="fav-h" className="page-h">Favorite properties</h1></div>
           <Link className="btn ghost" to="/#properties">Browse more</Link></div>

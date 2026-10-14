@@ -3,7 +3,6 @@ import Icon from "./Icon.jsx";
 import { waLink } from "../utils/contact.js";
 import { waEnquiryText } from "../utils/property.js";
 
-// Opens WhatsApp with a message already naming the property.
 export default function WhatsAppButton({ p, label = "WhatsApp", iconOnly = false }) {
   const href = waLink(waEnquiryText(p));
   const aria = `Enquire about ${p.title} on WhatsApp`;

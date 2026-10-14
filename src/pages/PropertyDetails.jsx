@@ -3,7 +3,10 @@ import { useApp } from "../context/AppContext.jsx";
 import { info, isRent } from "../utils/categories.js";
 import { inr } from "../utils/format.js";
 import { TEL, PHONE_PRETTY, mailLink } from "../utils/contact.js";
-import { areaOf, gallery as galleryOf, highlightsOf, propertyPath } from "../utils/property.js";
+import { collectionPath } from "../utils/routes.js";
+import { metaFor } from "../utils/seo.js";
+import { siteOrigin } from "../utils/boot.js";
+import { areaOf, highlightsOf, propertyPath, slugify } from "../utils/property.js";
 import { directionsUrl, embedUrl, hasPin, openMapUrl } from "../utils/geo.js";
 import { Link } from "../utils/router.jsx";
 import Seo from "../components/Seo.jsx";
@@ -11,38 +14,26 @@ import Gallery from "../components/Gallery.jsx";
 import EmiCalculator from "../components/EmiCalculator.jsx";
 import Cards from "../components/Cards.jsx";
 import WhatsAppButton from "../components/WhatsAppButton.jsx";
-import NotFound from "./NotFound.jsx";
 
-export default function PropertyDetails({ id }) {
-  const { all, state, saved, toggleSaved, setEnquiry } = useApp();
-  const p = all.find((x) => x.id === id);
+export default function PropertyDetails({ p }) {
+  const { all, saved, toggleSaved, setEnquiry } = useApp();
   const [copied, setCopied] = useState(false);
-
-  const jsonLd = useMemo(() => p && ({
-    "@context": "https://schema.org", "@type": "RealEstateListing", name: p.title, description: p.description,
-    url: location.origin + propertyPath(p), image: galleryOf(p).filter((u) => !/\.(mp4|webm|mov)/i.test(u)).map((u) => (u.startsWith("/") ? location.origin + u : u)),
-    offers: { "@type": "Offer", price: p.price, priceCurrency: "INR" },
-    contentLocation: { "@type": "Place", name: p.location },
-  }), [p]);
-
-  if (state === "loading") return <section className="page"><div className="wrap"><div className="skel tall" /></div></section>;
-  if (!p) return <NotFound what="property" />;
+  const path = propertyPath(p);
+  const meta = useMemo(() => metaFor({ type: "property", p, path }, all, siteOrigin()), [p, path, all]);
 
   const { g, sub } = info(p.category);
   const rent = isRent(p);
   const off = p.status && p.status !== "Available";
-  const path = propertyPath(p);
   const hl = highlightsOf(p);
   const similar = all.filter((x) => x.id !== p.id && info(x.category).g?.id === g?.id).slice(0, 3);
   const isSaved = saved.includes(p.id);
-  const imgs = galleryOf(p);
 
   const share = async () => {
-    const url = location.origin + path;
+    const url = siteOrigin() + path;
     try {
       if (navigator.share) await navigator.share({ title: p.title, text: `${p.title} · ${p.price_display} · ${p.location}`, url });
       else { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
-    } catch { /* cancelled */ }
+    } catch { }
   };
 
   const specs = [
@@ -56,12 +47,11 @@ export default function PropertyDetails({ id }) {
 
   return (
     <article className="page detail">
-      <Seo title={`${p.title} - ${sub} in ${areaOf(p)}`} path={path} image={imgs.find((u) => !/\.(mp4|webm|mov)/i.test(u))}
-        description={`${p.title}, ${p.location}. ${p.price_display}. ${p.description}`.slice(0, 158)} jsonLd={jsonLd} />
+      <Seo meta={meta} />
       <div className="wrap">
         <nav className="crumbs" aria-label="Breadcrumb">
           <Link to="/">Home</Link><i className="fa-solid fa-chevron-right" />
-          <Link to="/#properties">Properties</Link><i className="fa-solid fa-chevron-right" />
+          <Link to={collectionPath({ group: g?.id })}>{g?.label || "Properties"}</Link><i className="fa-solid fa-chevron-right" />
           <span aria-current="page">{p.title}</span>
         </nav>
 
@@ -106,7 +96,7 @@ export default function PropertyDetails({ id }) {
               <div className="stack">
                 <WhatsAppButton p={p} label="Enquire on WhatsApp" />
                 <a className="btn ghost" href={TEL}><i className="fa-solid fa-phone" /> Call {PHONE_PRETTY}</a>
-                <a className="btn ghost" href={mailLink(`Enquiry: ${p.title} (SLR-${p.id})`, `Hello SLR Properties,\n\nI am interested in "${p.title}" at ${p.location}.\n${location.origin}${path}\n`)}><i className="fa-solid fa-envelope" /> Email us</a>
+                <a className="btn ghost" href={mailLink(`Enquiry: ${p.title} (SLR-${p.id})`, `Hello SLR Properties,\n\nI am interested in "${p.title}" at ${p.location}.\n${siteOrigin()}${path}\n`)}><i className="fa-solid fa-envelope" /> Email us</a>
                 <button className="btn ghost" type="button" disabled={off} onClick={() => setEnquiry(p)}><i className="fa-solid fa-paper-plane" /> {off ? p.status : "Send enquiry form"}</button>
               </div>
               <div className="side-acts">
@@ -117,6 +107,15 @@ export default function PropertyDetails({ id }) {
             </div>
           </aside>
         </div>
+
+        <nav className="coll-links" aria-label="Related searches">
+          <h2 className="sub-h">Explore more</h2>
+          <div className="chips">
+            {g && g.subs.includes(sub) && <Link className="chip" to={collectionPath({ group: g.id, sub })}>More {sub.toLowerCase()}</Link>}
+            {g && <Link className="chip" to={collectionPath({ group: g.id })}>All {g.label.toLowerCase()}</Link>}
+            {areaOf(p) && slugify(areaOf(p)) && <Link className="chip" to={collectionPath({ area: areaOf(p) })}>Properties in {areaOf(p)}</Link>}
+          </div>
+        </nav>
 
         {similar.length > 0 && (
           <section className="similar" aria-labelledby="sim-h">

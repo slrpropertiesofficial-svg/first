@@ -1,5 +1,8 @@
+import { useMemo } from "react";
 import { useApp } from "../context/AppContext.jsx";
 import { DEFAULT_FILTERS } from "../utils/filters.js";
+import { metaFor } from "../utils/seo.js";
+import { siteOrigin } from "../utils/boot.js";
 import Seo from "../components/Seo.jsx";
 import Hero from "../components/Hero.jsx";
 import Browse from "../components/Browse.jsx";
@@ -11,12 +14,12 @@ import ContactSection from "../components/ContactSection.jsx";
 
 export default function Home() {
   const { all, applyFilters } = useApp();
+  const meta = useMemo(() => metaFor({ type: "home", path: "/" }, all, siteOrigin()), [all]);
   return (
     <>
-      <Seo title="Houses, Apartments, Villas, Plots & Commercial Rentals in Bangalore" path="/"
-        description="SLR PROPERTIES - verified houses, apartments, villas, sites, agricultural land, layout plots and commercial rentals in Bangalore. Search by location, type and budget." />
-      <Hero all={all} onSearch={(p) => applyFilters(p, true)} />
-      <Browse all={all} onPick={(group) => applyFilters({ ...DEFAULT_FILTERS, group }, true)} />
+      <Seo meta={meta} />
+      <Hero all={all} onSearch={(p) => applyFilters({ ...DEFAULT_FILTERS, ...p }, true)} />
+      <Browse all={all} />
       <Listings />
       <Why />
       <Process />

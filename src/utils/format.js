@@ -1,6 +1,5 @@
 export const inr = (n) => "₹" + Math.round(n).toLocaleString("en-IN");
 
-// 18500000 -> "₹1.85 Cr", 6800000 -> "₹68 Lakhs", 120000 rent -> "₹1.20 Lakh / Mo"
 export function priceLabel(n, rent = false) {
   n = Number(n) || 0;
   const trim = (v) => String(+v.toFixed(2));
@@ -20,5 +19,5 @@ export function emi(principal, annualRate, years) {
 
 export const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch { return d; } },
-  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* storage unavailable */ } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } },
 };

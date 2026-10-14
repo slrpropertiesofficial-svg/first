@@ -21,7 +21,7 @@ export default function Admin() {
 }
 
 function Login({ onDone }) {
-  const [mode, setMode] = useState(null); // null = checking | { otp, password }
+  const [mode, setMode] = useState(null);
   useEffect(() => { api.authMode().then((r) => setMode(r.ok ? r.data : { otp: false, password: true })).catch(() => setMode({ otp: false, password: true })); }, []);
   if (!mode) return <div className="login"><div className="login-card"><p className="muted">Loading…</p></div></div>;
   return mode.otp ? <OtpLogin onDone={onDone} password={mode.password} /> : <PasswordLogin onDone={onDone} />;
@@ -119,7 +119,7 @@ function Dashboard({ token, logout }) {
   const [props, setProps] = useState([]);
   const [inqs, setInqs] = useState([]);
   const [tab, setTab] = useState("properties");
-  const [editing, setEditing] = useState(null); // null | "new" | property
+  const [editing, setEditing] = useState(null);
   const [q, setQ] = useState("");
   const [iq, setIq] = useState("");
   const [toast, setToast] = useState("");
@@ -261,9 +261,9 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
   const editing = !!initial;
   const [f, setF] = useState(() => editing ? { ...EMPTY, ...initial, is_featured: !!initial.is_featured } : EMPTY);
   const [autoPrice, setAutoPrice] = useState(!editing);
-  const [cover, setCover] = useState(editing ? initial.image_url : "");       // existing/linked cover
+  const [cover, setCover] = useState(editing ? initial.image_url : "");
   const [coverFile, setCoverFile] = useState(null);
-  const [kept, setKept] = useState(() => editing ? galleryOf(initial).slice(1) : []);  // existing gallery
+  const [kept, setKept] = useState(() => editing ? galleryOf(initial).slice(1) : []);
   const [files, setFiles] = useState([]);
   const [busy, setBusy] = useState("");
   const [err, setErr] = useState("");
@@ -273,7 +273,7 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
   const rent = info(f.category).g?.id === "commercial";
   const resid = info(f.category).g?.id === "residential";
 
-  useEffect(() => { // keep the display price in sync until the owner edits it by hand
+  useEffect(() => {
     if (autoPrice && f.price !== "") setF((x) => ({ ...x, price_display: priceLabel(Number(x.price), rent) }));
   }, [f.price, rent, autoPrice]);
 

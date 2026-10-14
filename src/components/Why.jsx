@@ -1,4 +1,4 @@
-import logo from "../assets/logo-full.png";
+import logo from "../assets/logo-full.webp";
 import Icon from "./Icon.jsx";
 
 const cards = [
@@ -26,7 +26,7 @@ export default function Why() {
           ))}
         </div>
         <div className="brand-band">
-          <img loading="lazy" src={logo} alt="SLR Properties emblem" />
+          <img loading="lazy" decoding="async" src={logo} alt="SLR Properties emblem" width="150" height="97" />
           <div><b>SLR PROPERTIES</b><p>"Securing Your Space in the Future."</p></div>
         </div>
       </div>

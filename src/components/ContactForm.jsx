@@ -12,11 +12,10 @@ const validators = {
   email: (v) => (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v.trim()) ? "Enter a valid email address, e.g. name@example.com." : ""),
 };
 
-// Posts to the existing /api/inquiries endpoint. Success is shown only when the API confirms it.
 export default function ContactForm({ target, idPrefix = "c", showType = false, placeholder = "I would like to visit this property…" }) {
   const [form, setForm] = useState({ name: "", phone: "", email: "", type: "", msg: "" });
   const [errors, setErrors] = useState({});
-  const [status, setStatus] = useState("idle"); // idle | sending | error | sent
+  const [status, setStatus] = useState("idle");
   const [err, setErr] = useState("");
   const [waUrl, setWaUrl] = useState(WA);
 

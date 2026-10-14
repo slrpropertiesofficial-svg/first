@@ -1,9 +1,5 @@
-// Map helpers. Each listing can carry an exact pin (lat/lng, set in the owner console).
-// Listings without one fall back to the centre of their area, marked "approximate".
-
 export const BENGALURU = { lat: 12.9716, lng: 77.5946 };
 
-// Approximate area centres (checked against the whole location text, longest name first).
 const AREAS = {
   "devanahalli": [13.2473, 77.7120], "airport road": [13.1986, 77.7066], "indiranagar": [12.9784, 77.6408],
   "mg road": [12.9756, 77.6068], "whitefield": [12.9698, 77.7500], "yelahanka": [13.1007, 77.5963],
@@ -15,18 +11,16 @@ const AREAS = {
   "kanakapura": [12.8000, 77.4600], "yeshwanthpur": [13.0285, 77.5400], "hosur road": [12.9000, 77.6400],
   "bangalore": [12.9716, 77.5946], "bengaluru": [12.9716, 77.5946],
 };
-const AREA_KEYS = Object.keys(AREAS); // order matters: specific places come before general ones
+const AREA_KEYS = Object.keys(AREAS);
 
 const num = (v) => (v === null || v === undefined || v === "" ? NaN : Number(v));
 export const hasPin = (p) => Number.isFinite(num(p.lat)) && Number.isFinite(num(p.lng));
 
-// -> { lat, lng, exact } or null when nothing can be placed
 export function pointOf(p) {
   if (hasPin(p)) return { lat: num(p.lat), lng: num(p.lng), exact: true };
   const text = String(p.location || "").toLowerCase();
   const k = AREA_KEYS.find((a) => text.includes(a));
   if (!k) return null;
-  // tiny repeatable offset so several listings in one area do not sit exactly on top of each other
   const j = ((p.id * 9301 + 49297) % 233280) / 233280 - 0.5;
   const j2 = ((p.id * 7919 + 12347) % 104729) / 104729 - 0.5;
   return { lat: AREAS[k][0] + j * 0.012, lng: AREAS[k][1] + j2 * 0.012, exact: false };
@@ -39,11 +33,9 @@ export const directionsUrl = (p) => {
 export const openMapUrl = (p) =>
   `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(hasPin(p) ? `${num(p.lat)},${num(p.lng)}` : `${p.title}, ${p.location}`)}`;
 
-// Keyless embed (works without an API key) for a single place
 export const embedUrl = (p) =>
   `https://maps.google.com/maps?q=${encodeURIComponent(hasPin(p) ? `${num(p.lat)},${num(p.lng)}` : p.location)}&z=${hasPin(p) ? 16 : 13}&output=embed`;
 
-// Reads a pin out of whatever the owner pastes: a Google Maps link, or "12.97, 77.64".
 export function parsePin(text) {
   const t = decodeURIComponent(String(text || "").trim());
   if (!t) return null;
@@ -53,25 +45,4 @@ export function parsePin(text) {
     if (m && Math.abs(+m[1]) <= 90 && Math.abs(+m[2]) <= 180) return { lat: +(+m[1]).toFixed(6), lng: +(+m[2]).toFixed(6) };
   }
   return null;
-}
-
-// Leaflet (free OpenStreetMap map library), loaded only when the Map view is opened.
-let loader;
-export function loadLeaflet() {
-  if (window.L) return Promise.resolve(window.L);
-  if (loader) return loader;
-  const base = "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/";
-  loader = new Promise((resolve, reject) => {
-    if (!document.getElementById("leaflet-css")) {
-      const l = document.createElement("link");
-      l.id = "leaflet-css"; l.rel = "stylesheet"; l.href = base + "leaflet.min.css";
-      document.head.appendChild(l);
-    }
-    const s = document.createElement("script");
-    s.src = base + "leaflet.min.js"; s.async = true;
-    s.onload = () => resolve(window.L);
-    s.onerror = () => { loader = null; reject(new Error("load-failed")); };
-    document.head.appendChild(s);
-  });
-  return loader;
 }

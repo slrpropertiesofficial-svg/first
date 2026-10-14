@@ -10,7 +10,7 @@ import MapView from "./MapView.jsx";
 export default function Listings() {
   const { all, state, filters, applyFilters, resetFilters, saved, toggleSaved, setEnquiry } = useApp();
   const list = useMemo(() => filterProperties(all, filters, saved), [all, filters, saved]);
-  const [view, setView] = useState("list"); // list | map
+  const [view, setView] = useState("list");
   const active = filters.q || filters.min || filters.max || filters.location !== "all" || filters.deal !== "all" || filters.group !== "all";
 
   return (

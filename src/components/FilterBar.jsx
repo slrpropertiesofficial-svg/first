@@ -1,7 +1,6 @@
 import { GROUPS, BUY_BUDGETS, RENT_BUDGETS } from "../utils/categories.js";
 import { priceLabel } from "../utils/format.js";
 
-// Advanced search: sale/rent, type, location, min/max budget, keyword, sort.
 export default function FilterBar({ all, filters, setFilters }) {
   const g = GROUPS.find((x) => x.id === filters.group);
   const presets = (filters.deal === "rent" ? RENT_BUDGETS : BUY_BUDGETS).filter(([v]) => v);

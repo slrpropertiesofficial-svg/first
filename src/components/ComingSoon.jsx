@@ -2,7 +2,6 @@ import Button from "./Button.jsx";
 import Icon from "./Icon.jsx";
 import { WA, TEL, PHONE_PRETTY } from "../utils/contact.js";
 
-// Shown when the property database has no listings yet.
 export default function ComingSoon() {
   return (
     <div className="soon">

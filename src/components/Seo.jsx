@@ -1,35 +1,58 @@
 import { useEffect } from "react";
+import { ROBOTS_INDEX, ROBOTS_NOINDEX } from "../utils/seo.js";
+import { SITE } from "../utils/site.js";
+import { siteOrigin } from "../utils/boot.js";
 
-const SITE = "SLR PROPERTIES";
 function setMeta(attr, key, content) {
   let el = document.head.querySelector(`meta[${attr}="${key}"]`);
-  if (!el) { el = document.createElement("meta"); el.setAttribute(attr, key); document.head.appendChild(el); }
+  if (!el) {
+    el = document.createElement("meta");
+    el.setAttribute(attr, key);
+    document.head.appendChild(el);
+  }
   el.setAttribute("content", content);
 }
 
-// Sets title, description, canonical, social tags and optional JSON-LD for the current page.
-export default function Seo({ title, description, image, path = location.pathname, noindex = false, jsonLd }) {
+export default function Seo({ meta }) {
+  const sig = JSON.stringify(meta);
   useEffect(() => {
-    const full = title ? `${title} | ${SITE}` : `${SITE} | Securing Your Space in the Future.`;
-    const url = location.origin + path;
-    document.title = full;
-    setMeta("name", "description", description);
-    setMeta("name", "robots", noindex ? "noindex,follow" : "index,follow");
-    setMeta("property", "og:title", full);
-    setMeta("property", "og:description", description);
+    const origin = siteOrigin();
+    const url = origin + (meta.path === "/" ? "/" : meta.path);
+    const image = meta.image || origin + SITE.ogImage;
+    document.title = meta.title;
+    setMeta("name", "description", meta.description);
+    setMeta("name", "robots", meta.noindex ? ROBOTS_NOINDEX : ROBOTS_INDEX);
     setMeta("property", "og:type", "website");
+    setMeta("property", "og:site_name", SITE.name);
+    setMeta("property", "og:locale", SITE.locale);
+    setMeta("property", "og:title", meta.title);
+    setMeta("property", "og:description", meta.description);
     setMeta("property", "og:url", url);
-    setMeta("property", "og:site_name", SITE);
-    setMeta("property", "og:image", image || `${location.origin}/logo.jpg`);
+    setMeta("property", "og:image", image);
+    setMeta("property", "og:image:alt", meta.imageAlt || `${SITE.name} - ${SITE.tagline}`);
     setMeta("name", "twitter:card", "summary_large_image");
+    setMeta("name", "twitter:title", meta.title);
+    setMeta("name", "twitter:description", meta.description);
+    setMeta("name", "twitter:image", image);
+
     let link = document.head.querySelector('link[rel="canonical"]');
-    if (!link) { link = document.createElement("link"); link.rel = "canonical"; document.head.appendChild(link); }
+    if (!link) {
+      link = document.createElement("link");
+      link.rel = "canonical";
+      document.head.appendChild(link);
+    }
     link.href = url;
+
     let ld = document.getElementById("ld-json");
-    if (jsonLd) {
-      if (!ld) { ld = document.createElement("script"); ld.id = "ld-json"; ld.type = "application/ld+json"; document.head.appendChild(ld); }
-      ld.textContent = JSON.stringify(jsonLd);
+    if (meta.jsonLd?.length) {
+      if (!ld) {
+        ld = document.createElement("script");
+        ld.id = "ld-json";
+        ld.type = "application/ld+json";
+        document.head.appendChild(ld);
+      }
+      ld.textContent = JSON.stringify({ "@context": "https://schema.org", "@graph": meta.jsonLd });
     } else ld?.remove();
-  }, [title, description, image, path, noindex, jsonLd]);
+  }, [sig]);
   return null;
 }

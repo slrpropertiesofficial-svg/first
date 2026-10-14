@@ -1,4 +1,6 @@
 import Seo from "../components/Seo.jsx";
+import { metaFor } from "../utils/seo.js";
+import { siteOrigin } from "../utils/boot.js";
 import { EMAIL, PHONE_PRETTY, TEL } from "../utils/contact.js";
 
 const items = [
@@ -15,7 +17,7 @@ const items = [
 export default function Privacy() {
   return (
     <section className="page" aria-labelledby="priv-h">
-      <Seo title="Privacy Policy" path="/privacy" description="How SLR PROPERTIES collects and uses the information you share through its website and enquiry forms." />
+      <Seo meta={metaFor({ type: "privacy", path: "/privacy" }, [], siteOrigin())} />
       <div className="wrap narrow terms">
         <span className="eyebrow">Legal</span>
         <h1 id="priv-h" className="page-h">Privacy Policy</h1>

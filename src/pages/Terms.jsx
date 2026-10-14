@@ -1,4 +1,6 @@
 import Seo from "../components/Seo.jsx";
+import { metaFor } from "../utils/seo.js";
+import { siteOrigin } from "../utils/boot.js";
 import { EMAIL, PHONE_PRETTY, TEL } from "../utils/contact.js";
 
 const terms = [
@@ -18,7 +20,7 @@ const terms = [
 export default function Terms() {
   return (
     <section className="page" aria-labelledby="terms-h">
-      <Seo title="Terms & Conditions" path="/terms" description="Terms and conditions for using the SLR PROPERTIES website, property listings and enquiry forms." />
+      <Seo meta={metaFor({ type: "terms", path: "/terms" }, [], siteOrigin())} />
       <div className="wrap narrow terms">
         <span className="eyebrow">Legal</span>
         <h1 id="terms-h" className="page-h">Terms &amp; Conditions</h1>

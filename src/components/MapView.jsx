@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { BENGALURU, directionsUrl, loadLeaflet, pointOf } from "../utils/geo.js";
+import { BENGALURU, directionsUrl, pointOf } from "../utils/geo.js";
+import { loadLeaflet } from "../utils/leaflet.js";
 import { propertyPath, safeUrl, isVideo } from "../utils/property.js";
 import { navigate } from "../utils/router.jsx";
 
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Free OpenStreetMap map (Leaflet) with one pin per listing. Tapping a pin opens a small card.
 export default function MapView({ list }) {
   const box = useRef(null);
   const map = useRef(null);
   const layer = useRef(null);
-  const [status, setStatus] = useState("loading"); // loading | ready | error
+  const [status, setStatus] = useState("loading");
 
   useEffect(() => {
     let dead = false;
@@ -53,7 +53,6 @@ export default function MapView({ list }) {
     setTimeout(() => map.current?.invalidateSize(), 50);
   }, [list, status]);
 
-  // "View details" inside a pin card stays inside the single-page app
   useEffect(() => {
     const el = box.current;
     const h = (e) => {

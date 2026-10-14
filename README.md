@@ -1,91 +1,98 @@
-# SLR PROPERTIES — React (JSX) + Vite on Cloudflare Pages + D1 + R2
+# SLR PROPERTIES
 
-*"Securing Your Space in the Future."*
+React + Vite on Cloudflare Pages, with Pages Functions, D1 (listings and enquiries) and R2 (photos and videos).
+Public site at `/`, owner console at `/admin`.
 
-Public site (`/`), owner console (`/admin`), photos/videos in **R2**, listings and enquiries in **D1**.
+## Structure
 
 ```
-SLR/
-├── index.html  package.json  vite.config.js
-├── public/                 # logo.jpg, robots.txt, _routes.json (only /api/* runs the function)
-├── src/
-│   ├── main.jsx            # picks site or /admin
-│   ├── App.jsx             # routes: /, /property/:slug-id, /favorites
-│   ├── components/         # Navbar, Hero, Browse, FilterBar, Listings, PropertyCard, Gallery, EmiCalculator,
-│   │                       # ContactForm, EnquiryModal, WhatsAppButton, Why, Process, Faq, ContactSection,
-│   │                       # Footer, Floating, Layout, Seo
-│   ├── pages/              # Home, PropertyDetails, Favorites, NotFound, Admin
-│   ├── context/            # AppContext (listings, filters, favorites, enquiry modal)
-│   ├── utils/              # api, contact (phone/email/WhatsApp), categories, property, filters, format, router
-│   ├── styles/             # styles.css, pages.css, admin.css
-│   └── assets/             # logo.jpg
-├── functions/api/[[path]].js   # backend API (D1 + R2)
-└── schema.sql
+index.html                 static shell with fonts preloaded and default meta
+public/                    _headers, _routes.json, manifest, favicons, /img, /fonts
+functions/
+  [[path]].js              edge renderer: head tags, JSON-LD, HTML snapshot, redirects, 404s, robots, sitemap, llms.txt
+  api/[[path]].js          backend API (D1 + R2)
+  _lib/                    db, feeds, snapshot, cache, http, indexnow
+src/
+  utils/                   routes, seo, site, property, filters, format (shared by browser and edge)
+  pages/ components/       Home, Collection, PropertyDetails, Favorites, Admin, ...
 ```
 
-## v5 additions
-Advanced search (sale/rent, type, location, min/max budget) · property detail pages at `/property/<slug>-<id>` with gallery, specifications, highlights (taken only from the listing description), EMI, call/email/WhatsApp/enquiry form · per-property WhatsApp enquiry (prefilled message) · Favorites page (saved on the device) · enquiry form on the home page · per-page titles, descriptions, canonical/Open Graph tags, JSON-LD and robots.txt. Old `/#property-12` links redirect to the new pages.
+## Deploy
 
-## What was new in v4
-**Website:** Buy / Rent switch with matching budget ranges · sort (featured, newest, price, area) · saved properties (heart, kept on the visitor's device) · shareable property links (`/#property-12`) · gallery with arrows and keyboard · price per sq.ft and a home-loan EMI estimator on sale listings · similar properties · Sold / Under Offer / Rented status on cards · live listing counts · How it works and FAQ sections · back-to-top button.
+1. Push this folder to a GitHub repository.
+2. Cloudflare: create a D1 database and an R2 bucket.
+3. Workers & Pages: create a Pages project from the repository. Build command `npm run build`, output directory `dist`.
+4. Project Settings, Bindings: D1 as `DB`, R2 as `BUCKET`.
+5. Project Settings, Variables and Secrets: see below.
+6. Deploy. Tables and sample listings are created on the first visit.
 
-**Admin:** sign-in, stats (inventory value, enquiries in last 7 days) · search · **edit listings** · change status and toggle Featured from the table · display price auto-filled from the numeric price · remove single gallery items · delete and export enquiries to CSV.
+### Variables
 
-**API additions:** `PUT /api/admin/properties/{id}` (also cleans up replaced R2 files), `DELETE /api/admin/inquiries/{id}`, statuses `Available / Under Offer / Sold / Rented`.
-
-## Deploy (browser only)
-1. Upload the **contents** of this folder to a GitHub repository.
-2. Cloudflare → **Storage & Databases → D1** → create `slr-properties-db`.
-3. **R2 Object Storage** → create bucket `slr-properties-images`.
-4. **Workers & Pages → Create → Pages → Connect to Git**, then:
-   - Framework preset: **None** (or Vite)
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-5. Project → **Settings → Bindings**: D1 `DB` → `slr-properties-db`; R2 `BUCKET` → `slr-properties-images`.
-6. **Variables and Secrets** (see "Owner login by email code" below).
-7. **Deployments → Retry deployment**. Tables and six sample listings are created on first visit. Sign in at `/admin`.
+| Name | Purpose |
+| --- | --- |
+| `SITE_URL` | Your canonical address, for example `https://www.example.com`. Canonical tags, the sitemap and robots.txt use it, and requests on any other host (such as `*.pages.dev`) get a 301 to it. Set this. |
+| `INDEXNOW_KEY` | Optional. 8 to 128 letters, digits or dashes. Enables instant Bing, Yandex and Naver notification whenever a listing changes. |
+| `OWNER_EMAIL`, `RESEND_API_KEY`, `RESEND_FROM`, `SESSION_SECRET` | Owner sign-in by email code. |
+| `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `ALLOW_PASSWORD_LOGIN` | Optional password sign-in. Used as the fallback when the email variables are missing. |
 
 ## Run locally
+
 ```
 npm install
-npm run dev        # UI only; /api is proxied to http://localhost:8788
+npm run dev
+npm run preview:edge
 ```
-For the full stack locally, run `npm run build` then `npx wrangler pages dev dist` with D1/R2 bindings.
+
+`npm run dev` serves the UI only and proxies `/api` to port 8788. `npm run preview:edge` builds and runs the full stack, including the edge renderer, under Wrangler. Add `--d1 DB=slr --r2 BUCKET=slr` for local bindings.
+
+## SEO
+
+### How it works
+Every HTML request passes through `functions/[[path]].js`, which reads the listings (cached for two minutes) and returns the app shell with:
+
+- a unique title, meta description, canonical, robots, Open Graph and Twitter tags for the route
+- JSON-LD: RealEstateAgent, WebSite, BreadcrumbList, ItemList, FAQPage and RealEstateListing with offer, availability, address, floor size and coordinates
+- a real HTML snapshot of the page inside `#root` (headings, listings, links, FAQ) for crawlers that do not run JavaScript; React replaces it on load
+- the listing data embedded as JSON, so the browser does not wait for an API call
+- correct status codes: unknown URLs return 404, old or wrong property slugs 301 to the current one, trailing slashes 301 away
+
+### Crawlable pages
+`/properties`, `/properties/{residential|land|commercial}`, `/properties/{group}/{type}` and `/locations/{area}`. Locations appear automatically from listing data. A page with no listings stays reachable but is `noindex` and left out of the sitemap until a listing exists.
+
+### Feeds
+`/sitemap.xml` (lastmod and image entries), `/robots.txt` (allows `/api/images/` so uploaded photos can be indexed), `/llms.txt`.
+
+### Performance
+Fonts and icons are self-hosted with `font-display: swap` and metric-matched fallbacks, the hero is a preloaded responsive image, logos are WebP, Leaflet loads only when a map opens, hashed assets are cached for a year, and security headers (CSP, HSTS, nosniff, referrer and permissions policy) are set on every page.
+
+### After deploying
+1. Set `SITE_URL`, then add the site to Google Search Console and Bing Webmaster Tools and submit `/sitemap.xml`.
+2. Fill in `address`, `openingHours` and `geo` in `src/utils/site.js` once you have a street address. Claim a Google Business Profile with the same name, address and phone.
+3. Add `www` to apex (or the reverse) redirect in Cloudflare so only one host exists.
+4. Check pages with the Rich Results Test and PageSpeed Insights.
+5. Write a meaningful description for each listing; it feeds the title, snippet and structured data.
 
 ## API
+
 | Method | Endpoint | Auth |
 | --- | --- | --- |
-| GET | `/api/properties`, `/api/properties/{id}`, `/api/images/{key}` | – |
-| POST | `/api/inquiries` | – |
-| POST | `/api/admin/login` | credentials |
-| POST / PUT / DELETE | `/api/admin/properties[/{id}]` | admin token |
+| GET | `/api/properties`, `/api/properties/{id}`, `/api/images/{key}` | none |
+| POST | `/api/inquiries` | none |
+| POST | `/api/admin/login`, `/api/admin/otp/request`, `/api/admin/otp/verify` | credentials |
+| POST, PUT, DELETE | `/api/admin/properties[/{id}]` | admin token |
 | POST | `/api/admin/upload` | admin token |
-| GET / DELETE | `/api/admin/inquiries[/{id}]` | admin token |
+| GET, DELETE | `/api/admin/inquiries[/{id}]` | admin token |
 
-Uploads: images up to 10 MB, videos (MP4/WEBM/MOV) up to 50 MB.
+Uploads: images up to 10 MB, videos (MP4, WEBM, MOV) up to 50 MB.
 
+## Owner sign-in by email code
 
-## Owner login by email code (OTP)
-The owner enters their email at `/admin`, gets a 6-digit code (valid 5 minutes, one use), and is signed in for 12 hours. Only `OWNER_EMAIL` ever receives a code. 5 wrong tries burn the code, one request per minute, 5 per hour.
+The owner enters their email at `/admin` and receives a 6-digit code valid for 5 minutes and one use. Only `OWNER_EMAIL` ever receives a code. Five wrong tries burn the code, with one request per minute and five per hour.
 
-1. Create a free account at **resend.com**, add and verify your domain (adds a few DNS records in Cloudflare), and create an **API key**.
-   *Quick test without a domain:* use `RESEND_FROM = onboarding@resend.dev`; Resend then only delivers to the email you signed up with, so set `OWNER_EMAIL` to that.
-2. Cloudflare → Pages project → **Settings → Variables and Secrets**, add:
+1. Create a Resend account, verify your domain and create an API key. For a quick test use `RESEND_FROM = onboarding@resend.dev` with `OWNER_EMAIL` set to the email you signed up with.
+2. Add `OWNER_EMAIL`, `RESEND_API_KEY`, `RESEND_FROM` and `SESSION_SECRET` in Cloudflare and redeploy.
+3. To keep the password as a backup, leave `ADMIN_USERNAME` and `ADMIN_PASSWORD` set and add `ALLOW_PASSWORD_LOGIN = true`.
 
-| Name | Type | Example |
-| --- | --- | --- |
-| `OWNER_EMAIL` | Text | owner@yourdomain.com |
-| `RESEND_API_KEY` | Secret | re_xxxxxxxx |
-| `RESEND_FROM` | Text | SLR Properties <login@yourdomain.com> |
-| `SESSION_SECRET` | Secret | any long random text |
+## Maps
 
-3. Redeploy. The password form disappears. To keep the old password as a backup, leave `ADMIN_USERNAME` / `ADMIN_PASSWORD` set and add `ALLOW_PASSWORD_LOGIN = true`. If the OTP variables are missing, the site falls back to the password form so you are never locked out.
-
-## Google Map
-- **Browse page:** a List / Map switch above the listings. Pins follow the category / buy-rent / budget filters; tapping a pin shows photo, price, *View details* and *Directions*. The old Location dropdown is removed.
-- **Property page:** a Location section with the map and *Get directions* / *Open in Google Maps*.
-- **Owner console:** each listing has an optional *Map location* field. Paste a Google Maps link (or `12.9784, 77.6408`) to set the exact pin. Without it the pin sits at the centre of the area (marked "Approximate area").
-
-The map is **OpenStreetMap (Leaflet)**: free, no API key, no billing, nothing to set up. *Get directions* opens Google Maps and is also free.
-
-Existing databases get the new `lat` / `lng` columns and the `login_otps` table automatically on the first request.
+OpenStreetMap through Leaflet, bundled with the site. No API key or billing. Each listing has an optional map location in the owner console (paste a Google Maps link or `12.9784, 77.6408`). Without it the pin sits at the centre of the area.

@@ -1,11 +1,12 @@
 import { info } from "./categories.js";
+import { siteOrigin } from "./boot.js";
 
 export const isVideo = (u) => /\.(mp4|webm|mov|m4v|ogv)(\?.*)?$/i.test(u || "");
 export const safeUrl = (u) => (/^(\/(?!\/)|https?:\/\/)/i.test(u || "") ? u : "");
 
 export function gallery(p) {
   let extra = [];
-  try { extra = JSON.parse(p.images_json || "[]"); } catch { /* ignore */ }
+  try { extra = JSON.parse(p.images_json || "[]"); } catch { }
   return [p.image_url, ...extra].map(safeUrl).filter(Boolean);
 }
 
@@ -17,14 +18,12 @@ export function specsFor(p) {
   return [["fa-vector-square", "Clear Title", "Status"], ["fa-file-shield", "Verified", "Legal"], ["fa-ruler-combined", area, "Area Sq.Ft"]];
 }
 
-// Area = first part of "Whitefield, Bangalore".
 export const areaOf = (p) => String(p.location || "").split(",")[0].trim();
 
 export const slugify = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60);
 export const propertyPath = (p) => `/property/${slugify(p.title)}-${p.id}`;
 export const idFromSlug = (s) => { const m = String(s || "").match(/(\d+)$/); return m ? Number(m[1]) : null; };
 
-// Highlights are only picked out of the listing's own description - nothing is invented.
 const HIGHLIGHTS = [
   [/car parking|covered car|parking/i, "Car parking", "fa-car"],
   [/solar/i, "Solar water heating", "fa-sun"],
@@ -53,6 +52,25 @@ export const highlightsOf = (p) =>
   HIGHLIGHTS.filter(([re]) => re.test(`${p.description || ""}`)).map(([, label, icon]) => ({ label, icon }));
 
 export function waEnquiryText(p) {
-  const url = `${location.origin}${propertyPath(p)}`;
+  const url = `${siteOrigin()}${propertyPath(p)}`;
   return `Hello SLR Properties, I would like to enquire about "${p.title}" (${p.location}, ${p.price_display}) - Listing #SLR-${p.id}.\n${url}`;
+}
+
+export const isOffMarket = (p) => !!p.status && p.status !== "Available";
+
+export const isoDate = (v) => {
+  if (!v) return undefined;
+  const s = String(v);
+  const d = new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(s) ? s : `${s.replace(" ", "T")}Z`);
+  return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
+};
+
+export function addressOf(p, city = "Bangalore", region = "Karnataka", country = "IN") {
+  const parts = String(p.location || "").split(",").map((x) => x.trim()).filter(Boolean);
+  const isCity = (x) => /^(bangalore|bengaluru)$/i.test(x);
+  const named = parts.filter((x) => !isCity(x));
+  const a = { "@type": "PostalAddress", addressLocality: named.at(-1) || city, addressCountry: country };
+  if (named.length > 1) a.streetAddress = named.slice(0, -1).join(", ");
+  if (parts.some(isCity) || !parts.length) a.addressRegion = region;
+  return a;
 }

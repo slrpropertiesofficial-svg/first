@@ -1,20 +1,16 @@
-// SLR PROPERTIES - Cloudflare Pages Function (catch-all for /api/*)
-// Bindings (set in the Cloudflare dashboard):  DB = D1 database,  BUCKET = R2 bucket
-// Variables/secrets (set in dashboard):
-//   OWNER_EMAIL      - the only address that can receive a login code
-//   RESEND_API_KEY   - secret, from resend.com (sends the OTP email)
-//   RESEND_FROM      - e.g. "SLR Properties <login@yourdomain.com>" (domain verified in Resend)
-//   SESSION_SECRET   - secret, any long random text (signs the login session)
-//   ALLOW_PASSWORD_LOGIN, ADMIN_USERNAME, ADMIN_PASSWORD - optional backup password login
+import { ensureSchema } from "../_lib/db.js";
+import { affectedPaths, pingIndexNow } from "../_lib/indexnow.js";
+import { siteOrigin } from "../_lib/http.js";
+import { purgeCaches } from "../_lib/cache.js";
 
 const WHATSAPP_PHONE = "919964957015";
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
-const MAX_VIDEO_BYTES = 50 * 1024 * 1024; // keep videos compressed; larger files can be linked by URL
-const TOKEN_TTL_SECONDS = 60 * 60 * 12; // 12 hours
-const OTP_TTL_SECONDS = 5 * 60;        // a code is valid for 5 minutes
-const OTP_MAX_ATTEMPTS = 5;            // wrong tries before the code is burned
-const OTP_RESEND_SECONDS = 60;         // minimum gap between two code requests
-const OTP_MAX_PER_HOUR = 5;            // code requests per hour
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const TOKEN_TTL_SECONDS = 60 * 60 * 12;
+const OTP_TTL_SECONDS = 5 * 60;
+const OTP_MAX_ATTEMPTS = 5;
+const OTP_RESEND_SECONDS = 60;
+const OTP_MAX_PER_HOUR = 5;
 const ALLOWED_MEDIA_TYPES = {
   "image/jpeg": "jpg",
   "image/png": "png",
@@ -27,98 +23,12 @@ const ALLOWED_MEDIA_TYPES = {
 };
 const isHttpOrLocal = (u) => /^(\/api\/images\/|https?:\/\/)/i.test(u);
 
-const SCHEMA = [
-  `CREATE TABLE IF NOT EXISTS properties (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT NOT NULL,
-    category TEXT NOT NULL,
-    price REAL NOT NULL,
-    price_display TEXT NOT NULL,
-    location TEXT NOT NULL,
-    beds INTEGER DEFAULT 0,
-    baths INTEGER DEFAULT 0,
-    sqft INTEGER NOT NULL,
-    description TEXT NOT NULL,
-    image_url TEXT NOT NULL,
-    images_json TEXT,
-    is_featured INTEGER DEFAULT 0,
-    status TEXT DEFAULT 'Available',
-    lat REAL,
-    lng REAL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`,
-  `CREATE TABLE IF NOT EXISTS login_otps (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    code_hash TEXT NOT NULL,
-    expires_at INTEGER NOT NULL,
-    attempts INTEGER DEFAULT 0,
-    created_at INTEGER NOT NULL
-  )`,
-  `CREATE TABLE IF NOT EXISTS inquiries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    property_id INTEGER,
-    property_title TEXT,
-    client_name TEXT NOT NULL,
-    client_email TEXT NOT NULL,
-    client_phone TEXT NOT NULL,
-    message TEXT,
-    whatsapp_url TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`,
-];
-
-const U = "?auto=format&fit=crop&w=1200&q=80";
-const SEED = [
-  ["Golden Horizon Duplex House", "House", 18500000, "₹1.85 Cr", "Indiranagar, Bangalore", 4, 4, 3200,
-    "Spacious independent duplex house with private garden, modern kitchen, solar water heating, and 2 covered car parking slots in prime residential layout.",
-    "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9" + U,
-    JSON.stringify(["https://images.unsplash.com/photo-1600585154340-be6161a56a0c" + U, "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c" + U]), 1],
-  ["Prime Highway Commercial Land", "Land", 35000000, "₹3.50 Cr", "Airport Road, Devanahalli, Bangalore", 0, 0, 21780,
-    "1-Acre prime commercial clear-title land directly facing national highway. Ideal for resort, commercial warehouse, or corporate office hub.",
-    "https://images.unsplash.com/photo-1500382017468-9049fed747ef" + U,
-    JSON.stringify(["https://images.unsplash.com/photo-1464822759023-fed622ff2c3b" + U]), 1],
-  ["Royal Crest Gated Villa Plot", "Sites & Plots", 9500000, "₹95 Lakhs", "Whitefield, Bangalore", 0, 0, 2400,
-    "A-Katha 40x60 corner plot inside premium gated community with Underground cabling, clubhouse access, 40ft wide tar roads, and 24/7 security.",
-    "https://images.unsplash.com/photo-1524813686514-a57563d77965" + U,
-    JSON.stringify(["https://images.unsplash.com/photo-1500382017468-9049fed747ef" + U]), 1],
-  ["Grand High Street Retail Shop", "Rental Shops", 120000, "₹1.20 Lakh / Mo", "MG Road, Bangalore", 0, 1, 1400,
-    "High footfall ground floor corner retail showroom shop space for rent with 30ft glass frontage, 3-phase commercial power, and HVAC points.",
-    "https://images.unsplash.com/photo-1555396273-367ea4eb4db5" + U,
-    JSON.stringify(["https://images.unsplash.com/photo-1560448204-e02f11c3d0e2" + U]), 0],
-  ["Emerald Enclave Residential Site", "Sites & Plots", 6800000, "₹68 Lakhs", "Yelahanka, Bangalore", 0, 0, 1500,
-    "30x50 East-facing BDA approved residential site ready for immediate construction with clear legal documentation and bank loan approvals.",
-    "https://images.unsplash.com/photo-1500382017468-9049fed747ef" + U, "[]", 0],
-  ["Luxury Boutique House", "House", 24000000, "₹2.40 Cr", "Jayanagar, Bangalore", 5, 5, 4100,
-    "Architecturally designed 5-BHK luxury house with private elevator, home theatre setup, terrace lounge, and servant quarters.",
-    "https://images.unsplash.com/photo-1512917774080-9991f1c4c750" + U, "[]", 1],
-];
-
-// ---------- helpers ----------
 const json = (data, status = 200, extra = {}) =>
   new Response(JSON.stringify(data), {
     status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...extra },
+    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex", ...extra },
   });
 const fail = (status, detail) => json({ status: "error", detail }, status);
-
-let schemaReady = false;
-async function ensureSchema(db) {
-  if (schemaReady) return;
-  await db.batch(SCHEMA.map((s) => db.prepare(s)));
-  // Databases created before the map feature need the two coordinate columns added once.
-  for (const col of ["lat", "lng"]) {
-    try { await db.prepare(`ALTER TABLE properties ADD COLUMN ${col} REAL`).run(); } catch { /* already there */ }
-  }
-  const row = await db.prepare("SELECT COUNT(*) AS c FROM properties").first();
-  if (!row || row.c === 0) {
-    const stmt = db.prepare(
-      `INSERT INTO properties (title, category, price, price_display, location, beds, baths, sqft, description, image_url, images_json, is_featured, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Available')`
-    );
-    await db.batch(SEED.map((r) => stmt.bind(...r)));
-  }
-  schemaReady = true;
-}
 
 const enc = new TextEncoder();
 const b64url = (buf) =>
@@ -154,7 +64,6 @@ async function readJson(request) {
 const str = (v, d = "") => (typeof v === "string" ? v.trim() : d);
 const int = (v, d = 0) => { const n = parseInt(v, 10); return Number.isFinite(n) ? n : d; };
 
-// ---------- handlers ----------
 async function listProperties(url, env) {
   const p = url.searchParams;
   let q = "SELECT * FROM properties WHERE 1=1";
@@ -186,12 +95,10 @@ const otpReady = (env) => !!(env.OWNER_EMAIL && env.RESEND_API_KEY && env.RESEND
 const passwordAllowed = (env) => !!(env.ADMIN_USERNAME && env.ADMIN_PASSWORD) && (!otpReady(env) || String(env.ALLOW_PASSWORD_LOGIN).toLowerCase() === "true");
 const sameEmail = (a, b) => safeEqual(String(a || "").trim().toLowerCase(), String(b || "").trim().toLowerCase());
 
-// Tells the sign-in screen which method to show.
 function authMode(env) {
   return json({ status: "success", otp: otpReady(env), password: passwordAllowed(env) });
 }
 
-// Uniform 6-digit code (rejection sampling, no modulo bias).
 function sixDigits() {
   const a = new Uint32Array(1);
   do { crypto.getRandomValues(a); } while (a[0] >= 4294000000);
@@ -215,13 +122,12 @@ async function sendOtpEmail(env, code) {
   return res.ok;
 }
 
-// Step 1: owner types their email -> a code is mailed (only if it is the owner's address).
 async function otpRequest(request, env) {
   if (!otpReady(env)) return fail(500, "OTP login is not configured. Add OWNER_EMAIL, RESEND_API_KEY, RESEND_FROM and SESSION_SECRET in Cloudflare.");
   const body = await readJson(request);
   if (!body) return fail(400, "Invalid request body");
   const generic = json({ status: "success", message: "If that email is registered, a login code has been sent.", resend_in: OTP_RESEND_SECONDS });
-  if (!sameEmail(body.email, env.OWNER_EMAIL)) return generic; // never reveal which email is the owner's
+  if (!sameEmail(body.email, env.OWNER_EMAIL)) return generic;
 
   const now = Math.floor(Date.now() / 1000);
   await env.DB.prepare("DELETE FROM login_otps WHERE expires_at < ?").bind(now - 3600).run();
@@ -238,7 +144,6 @@ async function otpRequest(request, env) {
   return generic;
 }
 
-// Step 2: owner types the 6-digit code -> session token.
 async function otpVerify(request, env) {
   if (!otpReady(env)) return fail(500, "OTP login is not configured.");
   const body = await readJson(request);
@@ -254,11 +159,10 @@ async function otpVerify(request, env) {
     const left = OTP_MAX_ATTEMPTS - row.attempts - 1;
     return fail(401, left > 0 ? `Wrong code. ${left} ${left === 1 ? "try" : "tries"} left.` : "Wrong code. Ask for a new one.");
   }
-  await env.DB.prepare("DELETE FROM login_otps").run(); // a code works only once
+  await env.DB.prepare("DELETE FROM login_otps").run();
   return json({ status: "success", message: "Admin authentication successful", token: await makeToken(env) });
 }
 
-// Backup sign-in with username + password (only when OTP is not set up, or ALLOW_PASSWORD_LOGIN=true).
 async function adminLogin(request, env) {
   if (!passwordAllowed(env)) return fail(403, "Password sign-in is turned off. Use the email code.");
   const body = await readJson(request);
@@ -269,7 +173,6 @@ async function adminLogin(request, env) {
   return json({ status: "success", message: "Admin authentication successful", token: await makeToken(env) });
 }
 
-// Shared validation for create + update
 function parseProperty(b) {
   if (!b) return { error: fail(400, "Invalid request body") };
   const title = str(b.title), category = str(b.category), location = str(b.location);
@@ -283,7 +186,6 @@ function parseProperty(b) {
   if (!Array.isArray(gallery) || gallery.length > 30 || !gallery.every((u) => typeof u === "string" && isHttpOrLocal(u)))
     return { error: fail(422, "Gallery must be a list of uploaded files or http(s) links") };
   const status = ["Available", "Sold", "Rented", "Under Offer"].includes(str(b.status)) ? str(b.status) : "Available";
-  // Map pin (optional). Both or neither; must be a real coordinate.
   const hasPin = b.lat !== null && b.lat !== undefined && b.lat !== "" && b.lng !== null && b.lng !== undefined && b.lng !== "";
   const lat = hasPin ? Number(b.lat) : null, lng = hasPin ? Number(b.lng) : null;
   if (hasPin && !(Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180))
@@ -291,47 +193,49 @@ function parseProperty(b) {
   return { v: [title, category, price, price_display, location, int(b.beds), int(b.baths), sqft, description, image_url, JSON.stringify(gallery), b.is_featured ? 1 : 0, status, lat, lng] };
 }
 
-async function createProperty(request, env) {
+async function createProperty(request, env, ping) {
   const { v, error } = parseProperty(await readJson(request));
   if (error) return error;
   const res = await env.DB.prepare(
     `INSERT INTO properties (title, category, price, price_display, location, beds, baths, sqft, description, image_url, images_json, is_featured, status, lat, lng)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(...v).run();
+  ping({ id: res.meta.last_row_id, title: v[0], category: v[1], location: v[4] });
   return json({ status: "success", message: "Property added successfully", id: res.meta.last_row_id });
 }
 
-async function updateProperty(id, request, env) {
-  const old = await env.DB.prepare("SELECT image_url, images_json FROM properties WHERE id = ?").bind(id).first();
+async function updateProperty(id, request, env, ping) {
+  const old = await env.DB.prepare("SELECT * FROM properties WHERE id = ?").bind(id).first();
   if (!old) return fail(404, "Property not found");
   const { v, error } = parseProperty(await readJson(request));
   if (error) return error;
   await env.DB.prepare(
-    `UPDATE properties SET title=?, category=?, price=?, price_display=?, location=?, beds=?, baths=?, sqft=?, description=?, image_url=?, images_json=?, is_featured=?, status=?, lat=?, lng=? WHERE id=?`
+    `UPDATE properties SET title=?, category=?, price=?, price_display=?, location=?, beds=?, baths=?, sqft=?, description=?, image_url=?, images_json=?, is_featured=?, status=?, lat=?, lng=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`
   ).bind(...v, id).run();
-  // Remove R2 files that are no longer used by this listing
   try {
     const keep = new Set([v[9], ...JSON.parse(v[10])]);
     const before = [old.image_url, ...JSON.parse(old.images_json || "[]")];
     const gone = before.filter((u) => typeof u === "string" && u.startsWith("/api/images/") && !keep.has(u))
       .map((u) => decodeURIComponent(u.slice("/api/images/".length)));
     if (gone.length && env.BUCKET) await env.BUCKET.delete(gone);
-  } catch { /* ignore cleanup errors */ }
+  } catch { }
+  ping({ id, title: v[0], category: v[1], location: v[4] });
+  if (old.title !== v[0] || old.category !== v[1] || old.location !== v[4]) ping(old);
   return json({ status: "success", message: `Property #${id} updated` });
 }
 
-async function deleteProperty(id, env) {
-  const row = await env.DB.prepare("SELECT image_url, images_json FROM properties WHERE id = ?").bind(id).first();
+async function deleteProperty(id, env, ping) {
+  const row = await env.DB.prepare("SELECT * FROM properties WHERE id = ?").bind(id).first();
   if (!row) return fail(404, "Property not found");
   await env.DB.prepare("DELETE FROM properties WHERE id = ?").bind(id).run();
-  // Clean up any R2 images that belonged to this listing
   try {
     const extra = JSON.parse(row.images_json || "[]");
     const keys = [row.image_url, ...extra]
       .filter((u) => typeof u === "string" && u.startsWith("/api/images/"))
       .map((u) => decodeURIComponent(u.slice("/api/images/".length)));
     if (keys.length && env.BUCKET) await env.BUCKET.delete(keys);
-  } catch { /* ignore cleanup errors */ }
+  } catch { }
+  ping(row);
   return json({ status: "success", message: `Property #${id} removed successfully` });
 }
 
@@ -364,8 +268,6 @@ async function deleteInquiry(id, env) {
   return json({ status: "success", message: `Inquiry #${id} removed` });
 }
 
-// R2: upload a photo or video (admin). The file is sent as the raw request body and
-// streamed straight into R2 (no buffering), so large videos do not exhaust Worker memory.
 async function uploadMedia(request, env) {
   if (!env.BUCKET) return fail(500, "R2 bucket binding 'BUCKET' is not configured.");
   const type = (request.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase();
@@ -381,7 +283,6 @@ async function uploadMedia(request, env) {
   return json({ status: "success", key, url: `/api/images/${key}`, type: type.startsWith("video/") ? "video" : "image" });
 }
 
-// R2: public media delivery, with HTTP Range support so videos can seek / play on iOS Safari
 async function serveMedia(key, request, env) {
   if (!env.BUCKET) return fail(500, "R2 bucket binding 'BUCKET' is not configured.");
   const ranged = request.headers.has("Range");
@@ -406,16 +307,18 @@ async function serveMedia(key, request, env) {
   return new Response(request.method === "HEAD" ? null : obj.body, { headers });
 }
 
-// ---------- router ----------
-export async function onRequest({ request, env }) {
+export async function onRequest({ request, env, waitUntil }) {
   const url = new URL(request.url);
+  const ping = (p) => {
+    waitUntil(purgeCaches(url.origin));
+    waitUntil(pingIndexNow(env, siteOrigin(env, url), affectedPaths(p)));
+  };
   const path = url.pathname.replace(/\/+$/, "");
   const method = request.method;
 
   try {
     if (!env.DB) return fail(500, "D1 binding 'DB' is not configured. Add it in Settings → Bindings.");
 
-    // Public photo/video delivery (no schema init needed)
     if (path.startsWith("/api/images/") && (method === "GET" || method === "HEAD"))
       return serveMedia(decodeURIComponent(path.slice("/api/images/".length)), request, env);
 
@@ -433,10 +336,10 @@ export async function onRequest({ request, env }) {
 
     if (path.startsWith("/api/admin/")) {
       if (!(await isAdmin(request, env))) return fail(401, "Unauthorized admin action");
-      if (path === "/api/admin/properties" && method === "POST") return createProperty(request, env);
+      if (path === "/api/admin/properties" && method === "POST") return createProperty(request, env, ping);
       m = path.match(/^\/api\/admin\/properties\/(\d+)$/);
-      if (m && method === "PUT") return updateProperty(Number(m[1]), request, env);
-      if (m && method === "DELETE") return deleteProperty(Number(m[1]), env);
+      if (m && method === "PUT") return updateProperty(Number(m[1]), request, env, ping);
+      if (m && method === "DELETE") return deleteProperty(Number(m[1]), env, ping);
       const qi = path.match(/^\/api\/admin\/inquiries\/(\d+)$/);
       if (qi && method === "DELETE") return deleteInquiry(Number(qi[1]), env);
       if (path === "/api/admin/inquiries" && method === "GET") return listInquiries(env);

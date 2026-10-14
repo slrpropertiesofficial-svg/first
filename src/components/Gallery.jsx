@@ -23,7 +23,7 @@ export default function Gallery({ p }) {
   const cur = items[i];
   const view = (
     <>
-      {isVideo(cur) ? <video key={cur} src={cur} controls playsInline /> : <img key={cur} src={cur} alt={`${p.title} - photo ${i + 1}`} onClick={() => setZoom(true)} style={{ cursor: "zoom-in" }} />}
+      {isVideo(cur) ? <video key={cur} src={cur} controls playsInline /> : <img key={cur} src={cur} alt={`${p.title} - photo ${i + 1}`} fetchpriority={i === 0 ? "high" : undefined} decoding="async" onClick={() => setZoom(true)} style={{ cursor: "zoom-in" }} />}
       {n > 1 && <>
         <button type="button" className="nav-arrow l" onClick={() => go(-1)} aria-label="Previous"><i className="fa-solid fa-chevron-left" /></button>
         <button type="button" className="nav-arrow r" onClick={() => go(1)} aria-label="Next"><i className="fa-solid fa-chevron-right" /></button>
@@ -37,7 +37,7 @@ export default function Gallery({ p }) {
         <div className="thumbs">
           {items.map((u, k) => (
             <button type="button" key={u + k} className={k === i ? "on" : ""} onClick={() => setI(k)} aria-label={`Show media ${k + 1}`}>
-              {isVideo(u) ? <><video src={`${u}#t=0.1`} muted preload="metadata" /><i className="fa-solid fa-play" /></> : <img src={u} alt="" loading="lazy" />}
+              {isVideo(u) ? <><video src={`${u}#t=0.1`} muted preload="metadata" /><i className="fa-solid fa-play" /></> : <img src={u} alt="" loading="lazy" decoding="async" />}
             </button>))}
         </div>
       )}

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { GROUPS } from "../utils/categories.js";
 import { WA } from "../utils/contact.js";
-import logo from "../assets/logo-mark.png";
+import logo from "../assets/logo-mark.webp";
 import { Link } from "../utils/router.jsx";
+import { collectionPath } from "../utils/routes.js";
 
-export default function Header({ onPick, savedCount }) {
+export default function Header({ savedCount }) {
   const [menu, setMenu] = useState(false);
   const [dd, setDd] = useState(null);
   const [scrolled, setScrolled] = useState(false);
@@ -20,11 +21,11 @@ export default function Header({ onPick, savedCount }) {
     return () => { removeEventListener("scroll", onScroll); removeEventListener("keydown", onKey); document.removeEventListener("click", onClick); };
   }, []);
 
-  const pick = (g, s) => { onPick(g, s); setMenu(false); setDd(null); };
+  const close = () => { setMenu(false); setDd(null); };
 
   return (
     <nav className={`nav ${scrolled ? "scrolled" : ""}`} id="nav">
-      <Link className="logo" to="/" aria-label="SLR Properties home"><img src={logo} alt="SLR Properties" />
+      <Link className="logo" to="/" aria-label="SLR Properties home"><img src={logo} alt="SLR Properties" width="200" height="147" />
         <span className="brand-t"><b>SLR PROPERTIES</b><small>Securing Your Space in the Future.</small></span></Link>
       <button className="burger" type="button" aria-label="Toggle menu" aria-expanded={menu} onClick={() => setMenu(!menu)}><i /></button>
       <ul className={`menu ${menu ? "open" : ""}`}>
@@ -33,8 +34,8 @@ export default function Header({ onPick, savedCount }) {
           <li key={g.id} className={`dd ${dd === g.id ? "open" : ""}`}>
             <button type="button" aria-expanded={dd === g.id} onClick={(e) => { e.stopPropagation(); setDd(dd === g.id ? null : g.id); }}>{g.label}</button>
             <ul>
-              <li><button type="button" onClick={() => pick(g.id)}>All {g.label}</button></li>
-              {g.subs.map((s) => <li key={s}><button type="button" onClick={() => pick(g.id, s)}>{s}</button></li>)}
+              <li><Link to={collectionPath({ group: g.id })} onClick={close}>All {g.label}</Link></li>
+              {g.subs.map((s) => <li key={s}><Link to={collectionPath({ group: g.id, sub: s })} onClick={close}>{s}</Link></li>)}
             </ul>
           </li>
         ))}

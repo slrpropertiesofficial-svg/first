@@ -1,26 +1,26 @@
-import { useEffect } from "react";
-import { AppProvider } from "./context/AppContext.jsx";
+import { useEffect, useMemo } from "react";
+import { AppProvider, useApp } from "./context/AppContext.jsx";
 import Layout from "./components/Layout.jsx";
 import Splash from "./components/Splash.jsx";
 import Home from "./pages/Home.jsx";
+import Collection from "./pages/Collection.jsx";
 import Favorites from "./pages/Favorites.jsx";
 import PropertyDetails from "./pages/PropertyDetails.jsx";
 import Privacy from "./pages/Privacy.jsx";
 import Terms from "./pages/Terms.jsx";
 import NotFound from "./pages/NotFound.jsx";
 import { navigate, useLocation } from "./utils/router.jsx";
-import { idFromSlug } from "./utils/property.js";
+import { matchRoute } from "./utils/routes.js";
 
 function Routes() {
   const loc = useLocation();
+  const { all, state } = useApp();
 
-  // Old shareable links (/#property-12) -> /property/12
   useEffect(() => {
     const m = loc.hash.match(/^#property-(\d+)$/);
     if (m) navigate(`/property/${m[1]}`, { replace: true });
   }, [loc]);
 
-  // Scroll to the section in the URL hash, otherwise to the top of the new page.
   useEffect(() => {
     if (loc.hash && !/^#property-/.test(loc.hash)) {
       const t = setTimeout(() => document.getElementById(loc.hash.slice(1))?.scrollIntoView({ behavior: "smooth" }), 60);
@@ -29,13 +29,17 @@ function Routes() {
     window.scrollTo({ top: 0 });
   }, [loc.key]);
 
+  const route = useMemo(() => matchRoute(loc.path, all), [loc.path, all]);
+  const waiting = state === "loading" && (route.type === "property" || route.type === "collection" || route.type === "notfound");
+
   let page;
-  const m = loc.path.match(/^\/property\/([^/]+)$/);
-  if (loc.path === "/") page = <Home />;
-  else if (loc.path === "/privacy") page = <Privacy />;
-  else if (loc.path === "/terms") page = <Terms />;
-  else if (loc.path === "/favorites") page = <Favorites />;
-  else if (m && idFromSlug(m[1])) page = <PropertyDetails id={idFromSlug(m[1])} />;
+  if (waiting) page = <section className="page"><div className="wrap"><div className="skel tall" /></div></section>;
+  else if (route.type === "home") page = <Home />;
+  else if (route.type === "collection") page = <Collection route={route} />;
+  else if (route.type === "property") page = <PropertyDetails p={route.p} />;
+  else if (route.type === "privacy") page = <Privacy />;
+  else if (route.type === "terms") page = <Terms />;
+  else if (route.type === "favorites") page = <Favorites />;
   else page = <NotFound />;
   return <Layout>{page}</Layout>;
 }

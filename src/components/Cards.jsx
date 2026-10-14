@@ -11,7 +11,7 @@ export default function Cards({ p, saved, toggleSaved, onEnquire }) {
   return (
     <article className={`card ${off ? "off" : ""}`} onClick={(e) => { if (!e.target.closest("a,button")) navigate(path); }}>
       <div className="media">
-        <Media u={p.image_url} />
+        <Media u={p.image_url} alt={`${p.title} - ${p.location}`} />
         <div className="badges">
           <span className="badge">{info(p.category).sub}</span>
           {p.is_featured ? <span className="badge f"><i className="fa-solid fa-star" /> Featured</span> : null}

@@ -1,6 +1,8 @@
 import { GROUPS, info } from "../utils/categories.js";
+import { Link } from "../utils/router.jsx";
+import { collectionPath } from "../utils/routes.js";
 
-export default function Browse({ all, onPick }) {
+export default function Browse({ all }) {
   return (
     <section className="browse">
       <div className="wrap">
@@ -9,11 +11,11 @@ export default function Browse({ all, onPick }) {
           {GROUPS.map((g) => {
             const n = all.filter((p) => info(p.category).g?.id === g.id).length;
             return (
-              <button key={g.id} className="tile" type="button" onClick={() => onPick(g.id)}>
-                <img loading="lazy" src={g.img} alt="" onError={(e) => (e.currentTarget.style.display = "none")} />
+              <Link key={g.id} className="tile" to={collectionPath({ group: g.id })}>
+                <img loading="lazy" decoding="async" src={g.img} alt={`${g.label} in Bangalore`} width="900" height="600" onError={(e) => (e.currentTarget.style.display = "none")} />
                 <i className={`fa-solid ${g.icon}`} />
                 <div><h3>{g.label}</h3><small>{g.subs.join(" · ")}</small>{n > 0 && <span className="tile-n">{n} {n === 1 ? "listing" : "listings"}</span>}</div>
-              </button>
+              </Link>
             );
           })}
         </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { GROUPS, info } from "../utils/categories.js";
 import Button from "./Button.jsx";
 import { WA } from "../utils/contact.js";
+import { HERO } from "../utils/site.js";
 
 export default function Hero({ all, onSearch }) {
   const [type, setType] = useState("all");
@@ -19,14 +20,13 @@ export default function Hero({ all, onSearch }) {
     onSearch(patch);
   };
 
-  // Only show counts that carry information (nothing when the catalogue is empty).
   const counts = GROUPS.map((g) => ({ ...g, n: all.filter((p) => info(p.category).g?.id === g.id).length })).filter((c) => c.n > 0);
 
   return (
     <div className="hero">
-      <div className="hero-bg" role="img" aria-label="Luxury home exterior" />
+      <img className="hero-bg" src={HERO.src} srcSet={HERO.srcSet} sizes={HERO.sizes} alt={HERO.alt} width="2000" height="1333" fetchpriority="high" decoding="async" />
       <div className="wrap hero-in">
-        <h1>Find Your Perfect Property</h1>
+        <h1>Find Your Perfect Property in Bangalore</h1>
         <p className="slogan">Securing Your Space in the Future.</p>
         <p className="lead">Houses, apartments, villas, sites, agricultural land and commercial rental properties, with personal assistance at every step.</p>
 

@@ -1,4 +1,3 @@
-// Existing SLR Properties contact details (single source of truth).
 export const PHONE = "919964957015";
 export const PHONE_PRETTY = "+91 99649 57015";
 export const TEL = `tel:+${PHONE}`;
