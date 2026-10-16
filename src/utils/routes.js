@@ -2,7 +2,6 @@ import { GROUPS, isRent } from "./categories.js";
 import { idFromSlug, propertyPath, slugify } from "./property.js";
 import { DEFAULT_FILTERS, filterProperties, locationsOf } from "./filters.js";
 import { priceLabel } from "./format.js";
-import { SITE } from "./site.js";
 
 export function collectionPath({ group, sub, area } = {}) {
   if (area) return `/locations/${slugify(area)}`;
@@ -44,9 +43,9 @@ export function matchRoute(rawPath, all = []) {
 }
 
 const GROUP_H1 = {
-  residential: `Houses, Apartments & Villas for Sale in ${SITE.city}`,
-  land: `Plots, Sites & Land for Sale in ${SITE.city}`,
-  commercial: `Commercial Properties for Rent in ${SITE.city}`,
+  residential: "Houses, Apartments & Villas for Sale",
+  land: "Plots, Sites & Land for Sale",
+  commercial: "Commercial Properties for Rent",
 };
 
 export function collectionInfo(route, all) {
@@ -54,9 +53,9 @@ export function collectionInfo(route, all) {
   const list = filterProperties(all, { ...DEFAULT_FILTERS, group: group || "all", sub: sub || "all", location: area || "all" });
   const g = GROUPS.find((x) => x.id === group);
 
-  let h1 = `Properties for Sale & Rent in ${SITE.city}`;
-  if (area) h1 = `Properties in ${area}, ${SITE.city}`;
-  else if (sub) h1 = `${sub} for ${g.id === "commercial" ? "Rent" : "Sale"} in ${SITE.city}`;
+  let h1 = "Properties for Sale & Rent";
+  if (area) h1 = `Properties in ${area}`;
+  else if (sub) h1 = `${sub} for ${g.id === "commercial" ? "Rent" : "Sale"}`;
   else if (g) h1 = GROUP_H1[g.id];
 
   const n = list.length;

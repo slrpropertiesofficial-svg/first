@@ -73,7 +73,7 @@ export default function ContactForm({ target, idPrefix = "c", showType = false, 
       <p className="req-note"><span className="req">*</span> Required fields</p>
       {field("name", "Full name", { autoComplete: "name", placeholder: "e.g. Ramesh Kumar" })}
       <div className="two">
-        {field("phone", "Phone", { type: "tel", autoComplete: "tel", placeholder: "+91 99649 57015" })}
+        {field("phone", "Phone", { type: "tel", autoComplete: "tel", placeholder: "+91 XXXXX XXXXX" })}
         {field("email", "Email", { type: "email", autoComplete: "email", placeholder: "name@example.com" })}
       </div>
       {showType && (

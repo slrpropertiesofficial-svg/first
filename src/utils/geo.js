@@ -1,30 +1,7 @@
-export const BENGALURU = { lat: 12.9716, lng: 77.5946 };
-
-const AREAS = {
-  "devanahalli": [13.2473, 77.7120], "airport road": [13.1986, 77.7066], "indiranagar": [12.9784, 77.6408],
-  "mg road": [12.9756, 77.6068], "whitefield": [12.9698, 77.7500], "yelahanka": [13.1007, 77.5963],
-  "jayanagar": [12.9308, 77.5838], "koramangala": [12.9352, 77.6245], "hebbal": [13.0358, 77.5970],
-  "electronic city": [12.8452, 77.6602], "hsr layout": [12.9116, 77.6474], "jp nagar": [12.9063, 77.5857],
-  "sarjapur": [12.8600, 77.7870], "bannerghatta": [12.8000, 77.5770], "kr puram": [13.0050, 77.6960],
-  "hennur": [13.0400, 77.6400], "marathahalli": [12.9591, 77.6974], "rajajinagar": [12.9915, 77.5520],
-  "malleshwaram": [13.0035, 77.5710], "banashankari": [12.9255, 77.5468], "bellandur": [12.9304, 77.6784],
-  "kanakapura": [12.8000, 77.4600], "yeshwanthpur": [13.0285, 77.5400], "hosur road": [12.9000, 77.6400],
-  "bangalore": [12.9716, 77.5946], "bengaluru": [12.9716, 77.5946],
-};
-const AREA_KEYS = Object.keys(AREAS);
-
 const num = (v) => (v === null || v === undefined || v === "" ? NaN : Number(v));
 export const hasPin = (p) => Number.isFinite(num(p.lat)) && Number.isFinite(num(p.lng));
 
-export function pointOf(p) {
-  if (hasPin(p)) return { lat: num(p.lat), lng: num(p.lng), exact: true };
-  const text = String(p.location || "").toLowerCase();
-  const k = AREA_KEYS.find((a) => text.includes(a));
-  if (!k) return null;
-  const j = ((p.id * 9301 + 49297) % 233280) / 233280 - 0.5;
-  const j2 = ((p.id * 7919 + 12347) % 104729) / 104729 - 0.5;
-  return { lat: AREAS[k][0] + j * 0.012, lng: AREAS[k][1] + j2 * 0.012, exact: false };
-}
+export const pointOf = (p) => (hasPin(p) ? { lat: num(p.lat), lng: num(p.lng) } : null);
 
 export const directionsUrl = (p) => {
   const pt = hasPin(p) ? `${num(p.lat)},${num(p.lng)}` : `${p.title}, ${p.location}`;

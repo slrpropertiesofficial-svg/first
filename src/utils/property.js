@@ -65,12 +65,9 @@ export const isoDate = (v) => {
   return Number.isNaN(d.getTime()) ? undefined : d.toISOString();
 };
 
-export function addressOf(p, city = "Bangalore", region = "Karnataka", country = "IN") {
+export function addressOf(p, country = "IN") {
   const parts = String(p.location || "").split(",").map((x) => x.trim()).filter(Boolean);
-  const isCity = (x) => /^(bangalore|bengaluru)$/i.test(x);
-  const named = parts.filter((x) => !isCity(x));
-  const a = { "@type": "PostalAddress", addressLocality: named.at(-1) || city, addressCountry: country };
-  if (named.length > 1) a.streetAddress = named.slice(0, -1).join(", ");
-  if (parts.some(isCity) || !parts.length) a.addressRegion = region;
+  const a = { "@type": "PostalAddress", addressLocality: parts.at(-1), addressCountry: country };
+  if (parts.length > 1) a.streetAddress = parts.slice(0, -1).join(", ");
   return a;
 }

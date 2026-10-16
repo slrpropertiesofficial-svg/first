@@ -3,9 +3,6 @@ import { EMAIL, INSTAGRAM, CHANNEL, PHONE } from "./contact.js";
 export const SITE = {
   name: "SLR PROPERTIES",
   tagline: "Securing Your Space in the Future.",
-  city: "Bangalore",
-  cityLegal: "Bengaluru",
-  region: "Karnataka",
   country: "IN",
   locale: "en_IN",
   phone: `+${PHONE}`,
@@ -22,5 +19,5 @@ export const HERO = {
   src: `${HERO_BASE}&w=1024`,
   srcSet: [640, 1024, 1600, 2000].map((w) => `${HERO_BASE}&w=${w} ${w}w`).join(", "),
   sizes: "100vw",
-  alt: `Luxury home exterior - ${SITE.name}, ${SITE.city}`,
+  alt: `Luxury home exterior - ${SITE.name}`,
 };

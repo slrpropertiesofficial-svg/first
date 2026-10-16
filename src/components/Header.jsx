@@ -25,7 +25,7 @@ export default function Header({ savedCount }) {
 
   return (
     <nav className={`nav ${scrolled ? "scrolled" : ""}`} id="nav">
-      <Link className="logo" to="/" aria-label="SLR Properties home"><img src={logo} alt="SLR Properties" width="200" height="147" />
+      <Link className="logo" to="/" aria-label="SLR Properties home"><img src={logo} alt="SLR Properties" width="240" height="180" />
         <span className="brand-t"><b>SLR PROPERTIES</b><small>Securing Your Space in the Future.</small></span></Link>
       <button className="burger" type="button" aria-label="Toggle menu" aria-expanded={menu} onClick={() => setMenu(!menu)}><i /></button>
       <ul className={`menu ${menu ? "open" : ""}`}>

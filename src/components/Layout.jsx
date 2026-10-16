@@ -9,7 +9,7 @@ export default function Layout({ children }) {
   return (
     <>
       <a className="skip" href="#main">Skip to main content</a>
-      <header><Header savedCount={saved.length} /></header>
+      <header className="site-h"><Header savedCount={saved.length} /></header>
       <main id="main" tabIndex="-1">{children}</main>
       <Footer />
       <FloatingContact />

@@ -12,7 +12,7 @@ export default function Browse({ all }) {
             const n = all.filter((p) => info(p.category).g?.id === g.id).length;
             return (
               <Link key={g.id} className="tile" to={collectionPath({ group: g.id })}>
-                <img loading="lazy" decoding="async" src={g.img} alt={`${g.label} in Bangalore`} width="900" height="600" onError={(e) => (e.currentTarget.style.display = "none")} />
+                <img loading="lazy" decoding="async" src={g.img} alt={g.label} width="900" height="600" onError={(e) => (e.currentTarget.style.display = "none")} />
                 <i className={`fa-solid ${g.icon}`} />
                 <div><h3>{g.label}</h3><small>{g.subs.join(" · ")}</small>{n > 0 && <span className="tile-n">{n} {n === 1 ? "listing" : "listings"}</span>}</div>
               </Link>

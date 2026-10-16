@@ -95,4 +95,4 @@ The owner enters their email at `/admin` and receives a 6-digit code valid for 5
 
 ## Maps
 
-OpenStreetMap through Leaflet, bundled with the site. No API key or billing. Each listing has an optional map location in the owner console (paste a Google Maps link or `12.9784, 77.6408`). Without it the pin sits at the centre of the area.
+OpenStreetMap through Leaflet, bundled with the site. No API key or billing. Each listing has an optional map location in the owner console (paste a Google Maps link or `12.9784, 77.6408`). Without it the listing is simply left off the overview map.

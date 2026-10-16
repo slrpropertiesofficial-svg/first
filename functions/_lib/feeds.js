@@ -58,7 +58,7 @@ export function llmsTxt(all, origin) {
   const lines = [
     `# ${SITE.name}`,
     "",
-    `> Real estate agency in ${SITE.city}, India. Houses, apartments, villas, sites, agricultural land, layout plots and commercial rentals. ${SITE.tagline}`,
+    `> Real estate agency in India. Houses, apartments, villas, sites, agricultural land, layout plots and commercial rentals. ${SITE.tagline}`,
     "",
     "## Browse",
     `- [All properties](${origin}/properties)`,

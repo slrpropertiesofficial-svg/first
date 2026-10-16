@@ -26,7 +26,7 @@ export default function Hero({ all, onSearch }) {
     <div className="hero">
       <img className="hero-bg" src={HERO.src} srcSet={HERO.srcSet} sizes={HERO.sizes} alt={HERO.alt} width="2000" height="1333" fetchpriority="high" decoding="async" />
       <div className="wrap hero-in">
-        <h1>Find Your Perfect Property in Bangalore</h1>
+        <h1>Find Your Perfect Property</h1>
         <p className="slogan">Securing Your Space in the Future.</p>
         <p className="lead">Houses, apartments, villas, sites, agricultural land and commercial rental properties, with personal assistance at every step.</p>
 

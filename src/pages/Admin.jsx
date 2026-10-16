@@ -323,7 +323,7 @@ function PropertyForm({ token, initial, onClose, onSaved, logout }) {
           <label>Category *<select value={f.category} onChange={set("category")}>
             {GROUPS.map((g) => <optgroup key={g.id} label={g.label}>{g.subs.map((s) => <option key={s}>{s}</option>)}</optgroup>)}
             {!GROUPS.some((g) => g.subs.includes(f.category)) && <option>{f.category}</option>}</select></label>
-          <label className="span2">Location *<input required value={f.location} onChange={set("location")} placeholder="e.g. Indiranagar, Bangalore" /></label>
+          <label className="span2">Location *<input required value={f.location} onChange={set("location")} placeholder="e.g. Area, City" /></label>
           <label>Status<select value={f.status} onChange={set("status")}>{STATUSES.map((s) => <option key={s}>{s}</option>)}</select></label>
           <label>{rent ? "Monthly rent (₹) *" : "Price (₹) *"}<input required type="number" min="0" value={f.price} onChange={set("price")} placeholder={rent ? "120000" : "18500000"} /></label>
           <label>Display price *<input required value={f.price_display} onChange={(e) => { setAutoPrice(false); set("price_display")(e); }} placeholder="₹1.85 Cr" />

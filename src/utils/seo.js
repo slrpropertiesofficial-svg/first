@@ -37,11 +37,11 @@ export function orgNode(origin) {
     image: `${origin}${SITE.ogImage}`,
     telephone: SITE.phone,
     email: SITE.email,
-    areaServed: { "@type": "City", name: SITE.cityLegal },
+    areaServed: { "@type": "Country", name: "India" },
     contactPoint: [{ "@type": "ContactPoint", telephone: SITE.phone, email: SITE.email, contactType: "sales", areaServed: SITE.country }],
     sameAs: SITE.sameAs,
   };
-  if (SITE.address) n.address = { "@type": "PostalAddress", addressCountry: SITE.country, addressRegion: SITE.region, ...SITE.address };
+  if (SITE.address) n.address = { "@type": "PostalAddress", addressCountry: SITE.country, ...SITE.address };
   if (SITE.openingHours) n.openingHours = SITE.openingHours;
   if (SITE.geo) n.geo = { "@type": "GeoCoordinates", latitude: SITE.geo.lat, longitude: SITE.geo.lng };
   return n;
@@ -52,7 +52,7 @@ export const websiteNode = (origin) => ({
   "@id": `${origin}/#website`,
   url: `${origin}/`,
   name: SITE.name,
-  description: `Houses, apartments, villas, plots, land and commercial rentals in ${SITE.city}.`,
+  description: "Houses, apartments, villas, plots, land and commercial properties for sale and rent.",
   inLanguage: "en-IN",
   publisher: { "@id": `${origin}/#organization` },
 });
@@ -82,7 +82,7 @@ export function listingNode(p, origin) {
   const residential = g?.id === "residential";
   const sqft = Number(p.sqft) || 0;
 
-  const about = { "@type": residential ? (sub === "Apartments" ? "Apartment" : "House") : "Place", name: p.title, address: addressOf(p, SITE.cityLegal, SITE.region, SITE.country) };
+  const about = { "@type": residential ? (sub === "Apartments" ? "Apartment" : "House") : "Place", name: p.title, address: addressOf(p, SITE.country) };
   if (hasPin(p)) about.geo = { "@type": "GeoCoordinates", latitude: Number(p.lat), longitude: Number(p.lng) };
   if (residential) {
     if (p.beds > 0) about.numberOfBedrooms = p.beds;
@@ -165,8 +165,8 @@ export function metaFor(route, all, origin) {
   switch (route.type) {
     case "home":
       return {
-        title: withBrand(`Properties for Sale & Rent in ${SITE.city}`),
-        description: clip(`Browse houses, apartments, villas, sites, agricultural land, layout plots and commercial rentals in ${SITE.city}. Photos, prices, maps and direct WhatsApp enquiries with ${SITE.name}.`),
+        title: withBrand("Buy, Sell & Rent Properties"),
+        description: clip(`Browse houses, apartments, villas, sites, agricultural land, layout plots and commercial rentals. Photos, prices, maps and direct WhatsApp enquiries with ${SITE.name}.`),
         path: "/",
         jsonLd: [orgNode(origin), websiteNode(origin), ...(all.length ? [itemListNode(origin, all, "Available properties")] : []), faqNode()],
       };

@@ -24,7 +24,7 @@ const wrap = (inner) => `<div class="ssr">${nav()}<main>${inner}</main>${footer(
 
 function home(all) {
   return wrap(
-    `<h1>Find Your Perfect Property in ${t(SITE.city)}</h1><p>${t(SITE.tagline)}</p>` +
+    `<h1>Find Your Perfect Property</h1><p>${t(SITE.tagline)}</p>` +
     `<p>Houses, apartments, villas, sites, agricultural land and commercial rental properties, with personal assistance at every step.</p>` +
     `<h2>Browse by category</h2><ul>${GROUPS.map((g) => `<li><a href="${collectionPath({ group: g.id })}">${t(g.label)}</a>: ${g.subs.map((s) => `<a href="${collectionPath({ group: g.id, sub: s })}">${t(s)}</a>`).join(", ")}</li>`).join("")}</ul>` +
     (all.length ? `<h2>Available real estate</h2>${list(all)}` : "") +
