@@ -215,11 +215,6 @@ footer{border-top:1px solid var(--line);background:var(--surface2);padding:2.5re
 .social a{display:grid;place-items:center;width:40px;height:40px;padding:0;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink)}
 .social a:hover{background:var(--accent);color:var(--on-accent);text-decoration:none}
 .copy{margin-top:2rem;padding-top:1.2rem;border-top:1px solid var(--line);text-align:center;font-size:.78rem;color:var(--muted)}.copy a{color:inherit;text-decoration:underline}
-.copy{border-bottom:0}
-.credit{margin-top:.6rem;text-align:center;font-size:.85rem;color:var(--muted);letter-spacing:.02em}
-.credit-name{font-weight:800;color:var(--ink);font-size:.95rem}
-.credit-brand{display:inline-block;font-weight:800;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);text-decoration:none;padding:.1rem .6rem;border-radius:999px;background:rgba(31,51,88,.09);border:1px solid rgba(31,51,88,.25);transition:background .2s,color .2s,transform .2s}
-.credit-brand:hover{background:var(--accent);color:var(--on-accent);transform:translateY(-1px)}
 @media(max-width:900px){.fgrid{grid-template-columns:1fr 1fr}}
 @media(max-width:520px){.fgrid{grid-template-columns:1fr}.brand-band{flex-direction:column;text-align:center}}
 
@@ -322,3 +317,7 @@ footer{border-top:1px solid var(--line);background:var(--surface2);padding:2.5re
 .loc-acts{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.8rem}
 .loc-acts .btn{min-height:42px;padding:.5rem 1.1rem}
 .loc-note{margin-top:.5rem;font-size:.78rem;color:var(--muted)}
+.credit{margin-top:.6rem;text-align:center;font-size:.85rem;color:var(--muted);letter-spacing:.02em}
+.credit-name{font-weight:800;color:var(--ink);font-size:.95rem}
+.credit-brand{display:inline-block;font-weight:800;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);text-decoration:none;padding:.1rem .6rem;border-radius:999px;background:rgba(31,51,88,.09);border:1px solid rgba(31,51,88,.25);transition:background .2s,color .2s,transform .2s}
+.credit-brand:hover{background:var(--accent);color:var(--on-accent);transform:translateY(-1px)}
