@@ -321,3 +321,5 @@ footer{border-top:1px solid var(--line);background:var(--surface2);padding:2.5re
 .credit-name{font-weight:800;color:var(--ink);font-size:.95rem}
 .credit-brand{display:inline-block;font-weight:800;font-size:.95rem;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);text-decoration:none;padding:.1rem .6rem;border-radius:999px;background:rgba(31,51,88,.09);border:1px solid rgba(31,51,88,.25);transition:background .2s,color .2s,transform .2s}
 .credit-brand:hover{background:var(--accent);color:var(--on-accent);transform:translateY(-1px)}
+.skip{position:absolute;left:1rem;top:-4rem;z-index:400;padding:.7rem 1.1rem;border-radius:10px;background:var(--accent);color:var(--on-accent);font-weight:600;text-decoration:none;transition:top .2s}
+.skip:focus{top:1rem}
