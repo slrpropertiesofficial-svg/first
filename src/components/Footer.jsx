@@ -24,8 +24,8 @@ export default function Footer({ onPick }) {
           <div><h5>Legal</h5><Link to="/terms">Terms &amp; Conditions</Link><Link to="/privacy">Privacy Policy</Link><a href="/admin">Owner login</a></div>
         </div>
         <p className="copy">&copy; {new Date().getFullYear()} SLR PROPERTIES. All rights reserved.</p>
-        <p className="credit">Developed &amp; designed by <strong className="credit-name">Naveen</strong> from{" "}
-          <a className="credit-brand" href="https://nithura.com/" target="_blank" rel="noopener noreferrer">Nithura</a></p>
+        <p className="credit">Website by <strong className="credit-name">Naveen</strong> |{" "}
+          <a className="credit-brand" href="https://nithura.com/" target="_blank" rel="noopener noreferrer">Nithura</a>.</p>
       </div>
     </footer>
   );
